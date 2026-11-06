@@ -1,0 +1,2248 @@
+{
+  "file": "Qpaopaotang.swf",
+  "signature": "CWS",
+  "swfVersion": 9,
+  "declaredFileLength": 2309722,
+  "compressedBytes": 2167060,
+  "decompressedBytes": 2309714,
+  "widthPx": 550.0,
+  "heightPx": 400.0,
+  "fps": 35.0,
+  "frameCount": 12,
+  "tagCount": 3966,
+  "tagHistogram": {
+    "PlaceObject2": 1658,
+    "ShowFrame": 1147,
+    "DefineShape": 216,
+    "RemoveObject2": 190,
+    "FrameLabel": 86,
+    "End": 78,
+    "SoundStreamHead2": 77,
+    "DefineSprite": 77,
+    "DefineBitsJPEG3": 68,
+    "DefineBitsLossless2": 62,
+    "DoAction": 45,
+    "ExportAssets": 39,
+    "DefineShape3": 38,
+    "DefineShape2": 28,
+    "DefineEditText": 28,
+    "DefineShape4": 19,
+    "DefineText": 19,
+    "DefineSound": 17,
+    "StartSound": 17,
+    "DefineButton2": 16,
+    "CSMTextSettings": 16,
+    "DefineBitsLossless": 9,
+    "DefineFont3": 4,
+    "DefineFontAlignZones": 4,
+    "DefineBits": 2,
+    "DoInitAction": 2,
+    "FileAttributes": 1,
+    "SetBackgroundColor": 1,
+    "JPEGTables": 1,
+    "DefineFontName": 1
+  },
+  "details": {
+    "images": [
+      {
+        "id": 2,
+        "width": 21,
+        "height": 13,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 4,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 6,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 849,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 32
+      },
+      {
+        "id": 8,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 10,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 13,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 15,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 807,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 39
+      },
+      {
+        "id": 17,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 19,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 22,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1005,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 39
+      },
+      {
+        "id": 26,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 28,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 881,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 32
+      },
+      {
+        "id": 30,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 32,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 35,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 37,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 850,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 39
+      },
+      {
+        "id": 39,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 41,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 44,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1027,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 39
+      },
+      {
+        "id": 48,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 50,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 969,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 32
+      },
+      {
+        "id": 52,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 54,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 57,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 59,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 973,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 37
+      },
+      {
+        "id": 61,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 63,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 66,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1102,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 37
+      },
+      {
+        "id": 70,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 72,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 892,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 32
+      },
+      {
+        "id": 74,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 76,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 79,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 81,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 844,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 38
+      },
+      {
+        "id": 83,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 85,
+        "width": 16,
+        "height": 16,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 88,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1044,
+        "actual": "jpeg",
+        "height": 35,
+        "width": 38
+      },
+      {
+        "id": 92,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1035,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 94,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 946,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 96,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 882,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 98,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 906,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 100,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 861,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 102,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1051,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 104,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1023,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 106,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 848,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 108,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 861,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 110,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1018,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 112,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 114,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1294,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 116,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 118,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 120,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 122,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 124,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 126,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1035,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 128,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 130,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1043,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 132,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 984,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 134,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 959,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 136,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 138,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 140,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1032,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 142,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1404,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 144,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1194,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 146,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 148,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 150,
+        "width": 40,
+        "height": 57,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 152,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 872,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 154,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1121,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 156,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1186,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 158,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 871,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 160,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 936,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 162,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1017,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 164,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1190,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 166,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1107,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 168,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1085,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 170,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 833,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 172,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1061,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 174,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1002,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 176,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1048,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 178,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1095,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 180,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1323,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 182,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 986,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 184,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1122,
+        "actual": "jpeg",
+        "height": 57,
+        "width": 40
+      },
+      {
+        "id": 186,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 2640,
+        "actual": "jpeg",
+        "height": 101,
+        "width": 92
+      },
+      {
+        "id": 188,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 2043,
+        "actual": "jpeg",
+        "height": 101,
+        "width": 92
+      },
+      {
+        "id": 190,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 2303,
+        "actual": "jpeg",
+        "height": 101,
+        "width": 92
+      },
+      {
+        "id": 192,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 2511,
+        "actual": "jpeg",
+        "height": 101,
+        "width": 92
+      },
+      {
+        "id": 194,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 2537,
+        "actual": "jpeg",
+        "height": 101,
+        "width": 92
+      },
+      {
+        "id": 212,
+        "width": 30,
+        "height": 30,
+        "format": 5,
+        "alpha": false,
+        "tag": 20,
+        "extracted": true
+      },
+      {
+        "id": 214,
+        "width": 30,
+        "height": 30,
+        "format": 5,
+        "alpha": false,
+        "tag": 20,
+        "extracted": true
+      },
+      {
+        "id": 216,
+        "width": 30,
+        "height": 30,
+        "format": 5,
+        "alpha": false,
+        "tag": 20,
+        "extracted": true
+      },
+      {
+        "id": 218,
+        "width": 30,
+        "height": 30,
+        "format": 5,
+        "alpha": false,
+        "tag": 20,
+        "extracted": true
+      },
+      {
+        "id": 220,
+        "width": 30,
+        "height": 30,
+        "format": 5,
+        "alpha": false,
+        "tag": 20,
+        "extracted": true
+      },
+      {
+        "id": 222,
+        "tag": 6,
+        "alpha": false,
+        "extracted": true,
+        "bytes": 386,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 224,
+        "width": 30,
+        "height": 30,
+        "format": 5,
+        "alpha": false,
+        "tag": 20,
+        "extracted": true
+      },
+      {
+        "id": 226,
+        "width": 30,
+        "height": 30,
+        "format": 5,
+        "alpha": false,
+        "tag": 20,
+        "extracted": true
+      },
+      {
+        "id": 228,
+        "width": 30,
+        "height": 30,
+        "format": 5,
+        "alpha": false,
+        "tag": 20,
+        "extracted": true
+      },
+      {
+        "id": 230,
+        "width": 30,
+        "height": 30,
+        "format": 5,
+        "alpha": false,
+        "tag": 20,
+        "extracted": true
+      },
+      {
+        "id": 239,
+        "width": 69,
+        "height": 77,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 241,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 2834,
+        "actual": "jpeg",
+        "height": 77,
+        "width": 69
+      },
+      {
+        "id": 243,
+        "width": 69,
+        "height": 77,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 245,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 1958,
+        "actual": "jpeg",
+        "height": 77,
+        "width": 69
+      },
+      {
+        "id": 247,
+        "width": 69,
+        "height": 77,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 250,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 719,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 252,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 629,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 254,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 745,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 256,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 661,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 258,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 630,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 260,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 545,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 262,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 656,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 264,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 563,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 266,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 687,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 268,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 650,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 270,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 718,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 272,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 676,
+        "actual": "jpeg",
+        "height": 30,
+        "width": 30
+      },
+      {
+        "id": 328,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 330,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 332,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 334,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 336,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 338,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 340,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 342,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 344,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 346,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 348,
+        "width": 27,
+        "height": 38,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 350,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 352,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 354,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 356,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 358,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 360,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 362,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 364,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 366,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 368,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 370,
+        "width": 31,
+        "height": 35,
+        "format": 5,
+        "alpha": true,
+        "tag": 36,
+        "extracted": true
+      },
+      {
+        "id": 424,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 21980,
+        "actual": "jpeg",
+        "height": 179,
+        "width": 506
+      },
+      {
+        "id": 425,
+        "tag": 35,
+        "alpha": true,
+        "extracted": true,
+        "bytes": 7444,
+        "actual": "jpeg",
+        "height": 152,
+        "width": 151
+      },
+      {
+        "id": 511,
+        "tag": 6,
+        "alpha": false,
+        "extracted": true,
+        "bytes": 29142,
+        "actual": "jpeg",
+        "height": 400,
+        "width": 550
+      }
+    ],
+    "sounds": [
+      {
+        "id": 315,
+        "format": 2,
+        "rate": 11025,
+        "bits": 16,
+        "channels": 1,
+        "samples": 11520,
+        "bytes": 2602,
+        "extracted": true
+      },
+      {
+        "id": 319,
+        "format": 2,
+        "rate": 11025,
+        "bits": 16,
+        "channels": 1,
+        "samples": 8464,
+        "bytes": 1978,
+        "extracted": true
+      },
+      {
+        "id": 325,
+        "format": 2,
+        "rate": 11025,
+        "bits": 16,
+        "channels": 1,
+        "samples": 4528,
+        "bytes": 1146,
+        "extracted": true
+      },
+      {
+        "id": 390,
+        "format": 2,
+        "rate": 44100,
+        "bits": 16,
+        "channels": 2,
+        "samples": 16128,
+        "bytes": 7438,
+        "extracted": true
+      },
+      {
+        "id": 391,
+        "format": 2,
+        "rate": 22050,
+        "bits": 16,
+        "channels": 2,
+        "samples": 982656,
+        "bytes": 356649,
+        "extracted": true
+      },
+      {
+        "id": 392,
+        "format": 2,
+        "rate": 22050,
+        "bits": 16,
+        "channels": 2,
+        "samples": 980352,
+        "bytes": 355813,
+        "extracted": true
+      },
+      {
+        "id": 393,
+        "format": 2,
+        "rate": 22050,
+        "bits": 16,
+        "channels": 2,
+        "samples": 1062144,
+        "bytes": 385488,
+        "extracted": true
+      },
+      {
+        "id": 394,
+        "format": 2,
+        "rate": 22050,
+        "bits": 16,
+        "channels": 2,
+        "samples": 1014336,
+        "bytes": 368143,
+        "extracted": true
+      },
+      {
+        "id": 395,
+        "format": 2,
+        "rate": 22050,
+        "bits": 16,
+        "channels": 2,
+        "samples": 130176,
+        "bytes": 47359,
+        "extracted": true
+      },
+      {
+        "id": 396,
+        "format": 2,
+        "rate": 22050,
+        "bits": 16,
+        "channels": 2,
+        "samples": 683712,
+        "bytes": 248189,
+        "extracted": true
+      },
+      {
+        "id": 397,
+        "format": 2,
+        "rate": 22050,
+        "bits": 16,
+        "channels": 2,
+        "samples": 135936,
+        "bytes": 49449,
+        "extracted": true
+      },
+      {
+        "id": 398,
+        "format": 2,
+        "rate": 11025,
+        "bits": 16,
+        "channels": 1,
+        "samples": 3977,
+        "bytes": 1250,
+        "extracted": true
+      },
+      {
+        "id": 399,
+        "format": 2,
+        "rate": 11025,
+        "bits": 16,
+        "channels": 1,
+        "samples": 6705,
+        "bytes": 1666,
+        "extracted": true
+      },
+      {
+        "id": 400,
+        "format": 2,
+        "rate": 11025,
+        "bits": 16,
+        "channels": 1,
+        "samples": 4736,
+        "bytes": 1354,
+        "extracted": true
+      },
+      {
+        "id": 401,
+        "format": 2,
+        "rate": 11025,
+        "bits": 16,
+        "channels": 1,
+        "samples": 1310,
+        "bytes": 730,
+        "extracted": true
+      },
+      {
+        "id": 402,
+        "format": 2,
+        "rate": 11025,
+        "bits": 16,
+        "channels": 1,
+        "samples": 11216,
+        "bytes": 2498,
+        "extracted": true
+      },
+      {
+        "id": 403,
+        "format": 2,
+        "rate": 11025,
+        "bits": 16,
+        "channels": 1,
+        "samples": 8880,
+        "bytes": 2082,
+        "extracted": true
+      }
+    ],
+    "fonts": [
+      {
+        "id": 276,
+        "tag": 75,
+        "name": "Times New Roman"
+      },
+      {
+        "id": 296,
+        "tag": 75,
+        "name": "Arial Black"
+      },
+      {
+        "id": 446,
+        "name": "恅隋陔眙极潠",
+        "copyright": "",
+        "tag": 88
+      },
+      {
+        "id": 446,
+        "tag": 75
+      },
+      {
+        "id": 514,
+        "tag": 75,
+        "name": "Bookman Old Style"
+      }
+    ],
+    "frameLabels": [
+      "loading",
+      "left",
+      "up",
+      "right",
+      "down",
+      "left",
+      "up",
+      "right",
+      "down",
+      "left",
+      "up",
+      "right",
+      "down",
+      "left",
+      "up",
+      "right",
+      "down",
+      "森林系",
+      "沙漠系",
+      "城市系",
+      "藏宝系",
+      "糖果屋系",
+      "森林系_大型",
+      "沙漠系_大型",
+      "城市系_大型",
+      "藏宝系_大型",
+      "糖果屋系_大型",
+      "红",
+      "黄",
+      "蓝",
+      "绿",
+      "1p红",
+      "1p黄",
+      "1p蓝",
+      "1p绿",
+      "2p红",
+      "2p黄",
+      "2p蓝",
+      "2p绿",
+      "森林系",
+      "沙漠系",
+      "城市系",
+      "藏宝系",
+      "糖果屋系",
+      "生命加1",
+      "抢手",
+      "炸弹糖",
+      "盾牌",
+      "威力药",
+      "飞鞋",
+      "火箭",
+      "地雷",
+      "手榴弹",
+      "汽弹",
+      "冰箭",
+      "火焰箭",
+      "left",
+      "up",
+      "right",
+      "down",
+      "left",
+      "up",
+      "right",
+      "down",
+      "left",
+      "up",
+      "right",
+      "down",
+      "remove",
+      "menu",
+      "menu2",
+      "menu3",
+      "howtoplay",
+      "toolInstruction",
+      "select",
+      "game",
+      "win",
+      "timeupwin",
+      "lose",
+      "timeuplose",
+      "score",
+      "easy",
+      "normal",
+      "hard",
+      "highscore",
+      "highscore2"
+    ],
+    "exportAssets": [
+      [
+        403,
+        "tool.wav"
+      ]
+    ],
+    "symbolClasses": [],
+    "editTexts": [
+      {
+        "id": 277,
+        "variable": "",
+        "initialText": "",
+        "fontId": 276
+      },
+      {
+        "id": 297,
+        "variable": "(",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 299,
+        "variable": "(",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 515,
+        "variable": "",
+        "initialText": "",
+        "fontId": 514
+      },
+      {
+        "id": 516,
+        "variable": "",
+        "initialText": "",
+        "fontId": 514
+      },
+      {
+        "id": 517,
+        "variable": "",
+        "initialText": "",
+        "fontId": 514
+      },
+      {
+        "id": 518,
+        "variable": "",
+        "initialText": "",
+        "fontId": 514
+      },
+      {
+        "id": 521,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 522,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 530,
+        "variable": "",
+        "initialText": "",
+        "fontId": 514
+      },
+      {
+        "id": 559,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 560,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 561,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 562,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 563,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 565,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 572,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 573,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 574,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 575,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 576,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 577,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 578,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 579,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 580,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 581,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 583,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      },
+      {
+        "id": 584,
+        "variable": "",
+        "initialText": "",
+        "fontId": 296
+      }
+    ],
+    "sprites": [
+      {
+        "id": 377,
+        "frames": 11,
+        "bytes": 432
+      },
+      {
+        "id": 386,
+        "frames": 33,
+        "bytes": 444
+      },
+      {
+        "id": 388,
+        "frames": 45,
+        "bytes": 1212
+      },
+      {
+        "id": 1,
+        "frames": 1,
+        "bytes": 14
+      },
+      {
+        "id": 12,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 21,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 24,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 25,
+        "frames": 4,
+        "bytes": 167
+      },
+      {
+        "id": 34,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 43,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 46,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 47,
+        "frames": 4,
+        "bytes": 167
+      },
+      {
+        "id": 56,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 65,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 68,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 69,
+        "frames": 4,
+        "bytes": 168
+      },
+      {
+        "id": 78,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 87,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 90,
+        "frames": 12,
+        "bytes": 73
+      },
+      {
+        "id": 91,
+        "frames": 4,
+        "bytes": 167
+      },
+      {
+        "id": 196,
+        "frames": 58,
+        "bytes": 736
+      },
+      {
+        "id": 201,
+        "frames": 4,
+        "bytes": 89
+      },
+      {
+        "id": 210,
+        "frames": 8,
+        "bytes": 181
+      },
+      {
+        "id": 211,
+        "frames": 60,
+        "bytes": 1160
+      },
+      {
+        "id": 232,
+        "frames": 12,
+        "bytes": 204
+      },
+      {
+        "id": 237,
+        "frames": 4,
+        "bytes": 43
+      },
+      {
+        "id": 238,
+        "frames": 36,
+        "bytes": 746
+      },
+      {
+        "id": 249,
+        "frames": 11,
+        "bytes": 122
+      },
+      {
+        "id": 274,
+        "frames": 12,
+        "bytes": 121
+      },
+      {
+        "id": 278,
+        "frames": 1,
+        "bytes": 33
+      },
+      {
+        "id": 280,
+        "frames": 36,
+        "bytes": 436
+      },
+      {
+        "id": 294,
+        "frames": 12,
+        "bytes": 368
+      },
+      {
+        "id": 300,
+        "frames": 1,
+        "bytes": 77
+      },
+      {
+        "id": 305,
+        "frames": 8,
+        "bytes": 57
+      },
+      {
+        "id": 306,
+        "frames": 4,
+        "bytes": 178
+      },
+      {
+        "id": 307,
+        "frames": 60,
+        "bytes": 230
+      },
+      {
+        "id": 308,
+        "frames": 19,
+        "bytes": 380
+      },
+      {
+        "id": 309,
+        "frames": 19,
+        "bytes": 378
+      },
+      {
+        "id": 310,
+        "frames": 19,
+        "bytes": 367
+      },
+      {
+        "id": 311,
+        "frames": 4,
+        "bytes": 163
+      },
+      {
+        "id": 313,
+        "frames": 22,
+        "bytes": 488
+      },
+      {
+        "id": 314,
+        "frames": 4,
+        "bytes": 115
+      },
+      {
+        "id": 316,
+        "frames": 101,
+        "bytes": 2326
+      },
+      {
+        "id": 318,
+        "frames": 1,
+        "bytes": 22
+      },
+      {
+        "id": 320,
+        "frames": 40,
+        "bytes": 283
+      },
+      {
+        "id": 326,
+        "frames": 40,
+        "bytes": 2775
+      },
+      {
+        "id": 327,
+        "frames": 101,
+        "bytes": 2395
+      },
+      {
+        "id": 372,
+        "frames": 40,
+        "bytes": 373
+      },
+      {
+        "id": 603,
+        "frames": 0,
+        "bytes": 6
+      },
+      {
+        "id": 404,
+        "frames": 15,
+        "bytes": 176
+      },
+      {
+        "id": 440,
+        "frames": 3,
+        "bytes": 212
+      },
+      {
+        "id": 445,
+        "frames": 2,
+        "bytes": 108
+      },
+      {
+        "id": 471,
+        "frames": 1,
+        "bytes": 22
+      },
+      {
+        "id": 486,
+        "frames": 1,
+        "bytes": 262
+      },
+      {
+        "id": 491,
+        "frames": 1,
+        "bytes": 268
+      },
+      {
+        "id": 496,
+        "frames": 1,
+        "bytes": 277
+      },
+      {
+        "id": 501,
+        "frames": 1,
+        "bytes": 277
+      },
+      {
+        "id": 506,
+        "frames": 14,
+        "bytes": 234
+      },
+      {
+        "id": 510,
+        "frames": 2,
+        "bytes": 203
+      },
+      {
+        "id": 519,
+        "frames": 1,
+        "bytes": 840
+      },
+      {
+        "id": 523,
+        "frames": 1,
+        "bytes": 25
+      },
+      {
+        "id": 525,
+        "frames": 2,
+        "bytes": 32
+      },
+      {
+        "id": 528,
+        "frames": 4,
+        "bytes": 257
+      },
+      {
+        "id": 529,
+        "frames": 1,
+        "bytes": 1072
+      },
+      {
+        "id": 536,
+        "frames": 2,
+        "bytes": 47
+      },
+      {
+        "id": 540,
+        "frames": 3,
+        "bytes": 130
+      },
+      {
+        "id": 543,
+        "frames": 2,
+        "bytes": 39
+      },
+      {
+        "id": 545,
+        "frames": 1,
+        "bytes": 14
+      },
+      {
+        "id": 548,
+        "frames": 1,
+        "bytes": 22
+      },
+      {
+        "id": 551,
+        "frames": 1,
+        "bytes": 22
+      },
+      {
+        "id": 552,
+        "frames": 5,
+        "bytes": 144
+      },
+      {
+        "id": 553,
+        "frames": 70,
+        "bytes": 492
+      },
+      {
+        "id": 554,
+        "frames": 3,
+        "bytes": 32339
+      },
+      {
+        "id": 568,
+        "frames": 2,
+        "bytes": 31
+      },
+      {
+        "id": 591,
+        "frames": 3,
+        "bytes": 1326
+      },
+      {
+        "id": 597,
+        "frames": 4,
+        "bytes": 105
+      },
+      {
+        "id": 598,
+        "frames": 1,
+        "bytes": 625
+      }
+    ],
+    "shapes": {
+      "count": 0,
+      "bytes": 0
+    },
+    "abc": [],
+    "metadata": [],
+    "background": "#009900"
+  },
+  "classCount": 0,
+  "stringCount": 0
+}

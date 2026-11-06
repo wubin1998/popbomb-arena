@@ -1,0 +1,11 @@
+on(release){
+   if(_parent.stageClear)
+   {
+      _parent.game.gotoAndPlay(1);
+   }
+   else
+   {
+      _parent.game.gotoAndPlay(2);
+   }
+   gotoAndStop(1);
+}

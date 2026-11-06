@@ -1,0 +1,13 @@
+.DS_Store
+Thumbs.db
+*.log
+
+# 逆向工具与本地导出（不随仓库分发）
+tools/rea/
+tools/dist/
+node_modules/
+.omc/
+
+# 本地临时文件
+*.tmp
+*.bak

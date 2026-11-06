@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>PopBomb Arena — Q版泡泡堂 HTML5 重制</title>
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+  <div class="stage-wrap">
+    <!-- ================= HUD ================= -->
+    <aside id="hud" class="hud hidden">
+      <div class="hud-head">
+        <div class="logo-mini">Q版<span>泡泡堂</span></div>
+        <div class="stage-chip" id="stageChip">第 1 关 · 森林系</div>
+      </div>
+
+      <div class="timer-box">
+        <div class="timer-label">TIME</div>
+        <div class="timer" id="timer">3:00</div>
+        <div class="timer-track"><i id="timerBar"></i></div>
+      </div>
+
+      <div id="cards" class="cards"></div>
+
+      <div class="hud-foot">
+        <button class="mini-btn" id="pauseBtn" title="暂停 (P)">暂停</button>
+        <button class="mini-btn" id="soundBtn" title="声音开关 (M)">音效：开</button>
+      </div>
+    </aside>
+
+    <!-- ================= FIELD ================= -->
+    <section class="field" id="field">
+      <canvas id="game" width="450" height="390" aria-label="Q版泡泡堂游戏画面"></canvas>
+      <div class="field-frame"></div>
+      <div id="toast" class="toast"></div>
+      <div class="countdown hidden" id="countdown"><span>3</span></div>
+
+      <!-- ---------- TITLE ---------- -->
+      <div class="screen show" id="titleScreen">
+        <div class="blob blob-a"></div>
+        <div class="blob blob-b"></div>
+        <div class="title-lockup">
+          <div class="bomb-word"><span>BOMB</span><em>IT!</em></div>
+          <h1><span class="q">Q版</span>泡泡堂</h1>
+          <p class="subtitle">四人同场 · 炸弹对决 · 经典 Flash 重制</p>
+          <div class="hero-row" id="heroRow"></div>
+        </div>
+        <div class="title-actions">
+          <div class="mode-buttons">
+            <button class="btn btn-primary" id="soloBtn">
+              <b>单人挑战</b><small>1P vs 3 AI</small>
+            </button>
+            <button class="btn btn-secondary" id="duoBtn">
+              <b>双人同屏</b><small>2P + 2 AI</small>
+            </button>
+          </div>
+          <button class="btn btn-ghost" id="howBtn">玩法与道具</button>
+        </div>
+        <div class="title-foot"><span id="loadingText">正在载入素材…</span></div>
+      </div>
+
+      <!-- ---------- SETUP ---------- -->
+      <div class="screen" id="setupScreen">
+        <div class="setup-head">
+          <button class="back-btn" id="setupBack">←</button>
+          <div>
+            <h2>准备开战</h2>
+            <p id="setupSub">选择难度与角色</p>
+          </div>
+        </div>
+
+        <div class="setup-body">
+          <div class="setup-block">
+            <h3>难度</h3>
+            <div class="seg" id="diffSeg">
+              <button data-diff="easy">简单<small>15 关</small></button>
+              <button data-diff="normal" class="on">普通<small>20 关</small></button>
+              <button data-diff="hard">困难<small>25 关</small></button>
+            </div>
+          </div>
+
+          <div class="setup-block grow">
+            <h3>角色</h3>
+            <div class="pick-row" data-slot="0">
+              <span class="pick-label p1">P1</span>
+              <div class="pick-heroes" id="pick0"></div>
+            </div>
+            <div class="pick-row" data-slot="1" id="pickRow2">
+              <span class="pick-label p2">P2</span>
+              <div class="pick-heroes" id="pick1"></div>
+            </div>
+            <p class="pick-hint" id="pickHint">选择一名角色，其余位置由 AI 补满。</p>
+          </div>
+        </div>
+
+        <div class="setup-foot">
+          <div class="setup-summary" id="setupSummary"></div>
+          <button class="btn btn-primary btn-lg" id="startBtn" disabled>进入战场<small>START</small></button>
+        </div>
+      </div>
+
+      <!-- ---------- HOW TO ---------- -->
+      <div class="screen" id="howScreen">
+        <div class="sheet">
+          <h2>玩法与道具</h2>
+          <div class="how-grid">
+            <div class="how-card">
+              <h4>目标</h4>
+              <p>炸开蘑菇砖寻找道具，用炸弹击败全部对手。时间耗尽时，分数更高的一方获胜。</p>
+            </div>
+            <div class="how-card">
+              <h4>操作</h4>
+              <div class="keys">
+                <div><b>单人</b><span class="kbd">↑</span><span class="kbd">←</span><span class="kbd">↓</span><span class="kbd">→</span><span class="kbd wide">SPACE</span></div>
+                <div><b>2P·P1</b><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span><span class="kbd wide">SPACE</span></div>
+                <div><b>2P·P2</b><span class="kbd">↑</span><span class="kbd">←</span><span class="kbd">↓</span><span class="kbd">→</span><span class="kbd wide">ENTER</span></div>
+                <div><b>系统</b><span class="kbd wide">P</span> 暂停 <span class="kbd wide">M</span> 声音</div>
+              </div>
+            </div>
+            <div class="how-card">
+              <h4>普通道具</h4>
+              <p><b>生命加1</b> 多一次机会 · <b>抢手</b> 推动炸弹 · <b>炸弹糖</b> 携带 +1 · <b>盾牌</b> 挡一次 · <b>威力药</b> 范围 +1 · <b>飞鞋</b> 跑得更快。</p>
+            </div>
+            <div class="how-card">
+              <h4>特殊武器</h4>
+              <p><b>火箭</b> 直线贯穿 · <b>地雷</b> 踩中即爆 · <b>手榴弹</b> 投掷两格 · <b>汽弹</b> 减速 · <b>冰箭</b> 冻结 · <b>火焰箭</b> 三格火焰。</p>
+            </div>
+            <div class="how-card wide-card">
+              <h4>规则细节</h4>
+              <p>砖块有 60% 概率出现；爆炸每帧向外扩张一格，遇到石头停止，遇到蘑菇砖炸毁并停下。被击中的角色损失一条生命；生命耗尽后，本关失败。每关限时 3 分钟。</p>
+            </div>
+          </div>
+          <div class="sheet-foot"><button class="btn btn-primary" id="howClose">明白了</button></div>
+        </div>
+      </div>
+
+      <!-- ---------- PAUSE ---------- -->
+      <div class="screen overlay" id="pauseScreen">
+        <div class="dialog">
+          <div class="dialog-mark">❚❚</div>
+          <h2>已暂停</h2>
+          <p>泡泡们正在休息</p>
+          <div class="dialog-actions">
+            <button class="btn btn-primary" id="resumeBtn">继续游戏</button>
+            <button class="btn btn-ghost" id="restartBtn">重开本关</button>
+            <button class="btn btn-ghost" id="quitBtn">返回标题</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------- RESULT ---------- -->
+      <div class="screen overlay" id="resultScreen">
+        <div class="dialog result-dialog">
+          <div class="result-badge" id="resultBadge">VICTORY</div>
+          <h2 id="resultTitle">关卡完成</h2>
+          <p id="resultSub">干得漂亮！</p>
+          <div class="result-stats" id="resultStats"></div>
+          <div class="dialog-actions" id="resultActions"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="page-foot">
+    <span>原作：Q版泡泡堂 · BOMB IT</span>
+    <span class="dot">•</span>
+    <span>HTML5 Remake · Canvas 2D · 35 FPS</span>
+  </footer>
+</div>
+
+<script src="src/js/engine.js"></script>
+<script src="src/js/game/map.js"></script>
+<script src="src/js/game/bomb.js"></script>
+<script src="src/js/game/tools.js"></script>
+<script src="src/js/game/hero.js"></script>
+<script src="src/js/game/game.js"></script>
+<script src="src/js/main.js"></script>
+</body>
+</html>
