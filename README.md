@@ -242,4 +242,8 @@ node tools/cdp_test.js
 - `Qpaopaotang.swf`、`src/assets/**`、`analysis/**` 中的原始素材与反编译产物**不在 MIT 范围内**，版权归各自权利人所有。
 - 本项目是非官方粉丝重制，与《Q版泡泡堂》/ BOMB IT 的原作者和发行商无关联。
 
-仓库无需构建，推送到 GitHub 后可直接用 **Settings → Pages → Deploy from branch** 发布静态站点。
+仓库无需构建。推送到 GitHub 后，在 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**，工作流会自动把 `_site`（仅包含运行游戏所需的 `index.html`、`style.css` 和 `src/`）发布到：
+
+```text
+https://wubin1998.github.io/popbomb-arena/
+```
