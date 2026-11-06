@@ -4,6 +4,12 @@
 
 > 本项目与原作者、发行商无关联，仅用于学习与怀旧。原始 SWF 与提取素材的版权归各自权利人所有。
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-popbomb--arena-181717?logo=github)](https://github.com/wubin1998/popbomb-arena)
+
+- 源码：<https://github.com/wubin1998/popbomb-arena>
+- 在线试玩：<https://wubin1998.github.io/popbomb-arena/>（需先在仓库 Settings → Pages 启用 GitHub Actions）
+
 ![标题界面](docs/screenshot-title.png)
 
 ![对战画面](docs/screenshot-game.png)
@@ -15,7 +21,7 @@
 项目是纯静态页面。由于浏览器对本地文件（`file://`）的音频和资源加载有限制，请用任意静态服务器启动：
 
 ```bash
-cd flash-game
+cd popbomb-arena
 python3 -m http.server 8000
 ```
 
@@ -96,7 +102,7 @@ php -S 127.0.0.1:8000
 ## 项目结构
 
 ```text
-flash-game/
+popbomb-arena/
 ├── index.html                 页面骨架与所有界面层
 ├── style.css                  视觉样式与响应式布局
 ├── LICENSE                    代码许可（MIT，素材除外）
@@ -132,7 +138,7 @@ flash-game/
 ## 技术说明
 
 - **固定 35 Hz 逻辑**：`BI.Loop` 使用累加器，把渲染帧与逻辑帧分离；移动在格内插值，保持原作的逐格手感。
-- **逻辑分辨率 450 × 390**：15 × 13 格 × 30 px，与原始游戏区一致；页面用 CSS 等比放大到最大 720 × 624（约 1.6×），窗口变小时自动收缩。
+- **逻辑分辨率 450 × 390**：15 × 13 格 × 30 px，与原始游戏区一致；页面用 CSS 等比放大，最大 900 px 宽（1440 × 900 窗口下约 746 × 647，约 1.66×），窗口变小时自动收缩。
 - **高清渲染**：画布按屏幕宽度与 devicePixelRatio 使用 2–4× 后备分辨率；优先加载 `img@2x`，绘制时仍以 450 × 390 的逻辑坐标定位。2× 素材由原始 SWF 位图放大并锐化而来，属于清晰化处理，不能恢复原始分辨率以外的细节。
 - **伪 3D 排序**：角色、炸弹、火焰按“行 + x”深度排序，和 AS2 的 `calDepth(x,y,margin)` 一致；炸弹/武器比同格角色低 5 个深度，因此会绘制在角色身后。
 - **地图生成**：60% 砖块、中央 2×2 地标、出生点对角不可破坏石，以及原版的“狭小空腔填充”算法，而非随机撒石头。
@@ -140,6 +146,35 @@ flash-game/
 - **无外部依赖**：所有代码为原生 ES2018+，素材为本地 PNG/MP3。
 
 更完整的逆向细节（SWF 结构、脚本映射、常量、公式、资产清单）见 [analysis/QPAOPAOTANG_PHASE1.md](analysis/QPAOPAOTANG_PHASE1.md)。
+
+---
+
+## 更新记录
+
+### 2026-11-06
+
+- 游戏区放大：CSS 最大宽度提升到 900 px，HUD、菜单和结算面板同步放大。
+- 高清素材：新增 546 张 `img@2x` 2× PNG，画布按 2–4× 后备分辨率渲染；2× 缺失时自动回退 1×。
+- 修复绘制顺序：炸弹和特殊武器按原版深度规则绘制在同格角色身后。
+- 仓库整理：移除 Bomb It 7 分析产物、REA 检出和本地 FFDec/JRE，只保留 Qpaopaotang 相关内容。
+- 新增 MIT 代码许可与 GitHub Actions Pages 部署工作流。
+
+---
+
+## 路线图
+
+- [x] 35 Hz 逻辑、地图生成、AI、道具、特殊武器与关卡流程
+- [x] 响应式放大、2× 素材、HiDPI 渲染
+- [x] 炸弹/武器深度排序修复
+- [x] headless Chrome 冒烟测试
+- [ ] 触屏虚拟方向键与攻击键
+- [ ] PWA、离线缓存与安装到主屏幕
+- [ ] 排行榜、名字输入与最高分持久化
+- [ ] GitHub Actions 自动跑冒烟测试
+- [ ] 手柄支持
+- [ ] Switch 自制程序移植（可选，非官方）
+
+联机对战不在当前范围内；本项目是单机/本地双人对战。
 
 ---
 
