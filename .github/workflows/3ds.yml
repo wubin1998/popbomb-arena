@@ -41,14 +41,19 @@ jobs:
 
       - name: Publish build log
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git config user.email "ci@localhost"
-          git config user.name "ci"
-          git checkout -B ci-diag
-          cp /tmp/build.log build.log
-          git add -f build.log
-          git commit -m "ci build log"
-          git push --force origin ci-diag
+          set -x
+          head -c 60000 /tmp/build.log > build.log
+          B64=$(base64 -w0 build.log)
+          API=https://api.github.com/repos/${{ github.repository }}
+          SHA=$(git rev-parse HEAD)
+          curl -s -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$API/git/refs/heads/ci-diag"
+          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" "$API/git/refs" \
+            -d "{\"ref\":\"refs/heads/ci-diag\",\"sha\":\"$SHA\"}"
+          curl -s -X PUT -H "Authorization: Bearer $GH_TOKEN" "$API/contents/build.log" \
+            -d "{\"message\":\"ci build log\",\"content\":\"$B64\",\"branch\":\"ci-diag\"}" > /dev/null
 
       - name: Show artifacts
         run: ls -lh ports/3ds/popbomb-arena.3dsx ports/3ds/popbomb-arena.elf
