@@ -13,10 +13,11 @@
 
 #define STEP_MS (1000.0 / 35.0)
 #define CFG_PATH "sdmc:/3ds/popbomb-arena.cfg"
+#define SCENE_COUNT 5
 
 enum { SCREEN_TITLE = 0, SCREEN_GAME, SCREEN_RESULT, SCREEN_LOBBY };
 enum { PAGE_HOME = 0, PAGE_MODE, PAGE_DIFF, PAGE_HERO, PAGE_INFO, PAGE_SETTINGS };
-enum { MODE_SOLO = 0, MODE_LOCAL, MODE_HOST, MODE_JOIN };
+enum { MODE_SOLO = 0, MODE_HOST, MODE_JOIN };
 
 static C3D_RenderTarget* s_top;
 static C3D_RenderTarget* s_bottom;
@@ -48,7 +49,7 @@ static const char* g_notice;
 static bool g_stage_seen;
 static uint8_t g_stage_seq;
 
-static const char* const MODE_NAMES[4] = { "单人", "双人", "联机主机", "联机加入" };
+static const char* const MODE_NAMES[3] = { "单人", "联机主机", "联机加入" };
 static const char* const DIFF_NAMES[3] = { "简单", "普通", "困难" };
 static const int DIFF_STAGES[3] = { 15, 20, 25 };
 
@@ -175,13 +176,56 @@ static void next_special_pair(void)
 	}
 }
 
+/* osGetTime can stand still on a console whose RTC is not running, and a
+   fixed seed would give every match the same layout. The system tick and a
+   call counter keep consecutive stages apart even then. */
+static uint32_t fresh_seed(void)
+{
+	static uint32_t calls;
+	uint64_t t = osGetTime();
+	uint64_t ticks = svcGetSystemTick();
+	calls++;
+	return (uint32_t)(t ^ (t >> 32) ^ ticks ^ (ticks >> 32)) * 2654435761u
+	       + calls * 0x9e3779b9u;
+}
+
+/* Deal scenes from a shuffled deck so the map visibly changes from stage to
+   stage instead of relying on a draw that may keep landing on the same one. */
+static int s_scene_deck[SCENE_COUNT];
+static int s_scene_left;
+static int s_scene_last = -1;
+
+static int next_scene(void)
+{
+	if (s_scene_left <= 0) {
+		for (int i = 0; i < SCENE_COUNT; i++)
+			s_scene_deck[i] = i;
+		for (int i = SCENE_COUNT - 1; i > 0; i--) {
+			int j = rng_int(0, i);
+			int t = s_scene_deck[i];
+			s_scene_deck[i] = s_scene_deck[j];
+			s_scene_deck[j] = t;
+		}
+		if (s_scene_deck[0] == s_scene_last) {
+			int t = s_scene_deck[0];
+			s_scene_deck[0] = s_scene_deck[1];
+			s_scene_deck[1] = t;
+		}
+		s_scene_left = SCENE_COUNT;
+	}
+	int scene = s_scene_deck[SCENE_COUNT - s_scene_left];
+	s_scene_left--;
+	s_scene_last = scene;
+	return scene;
+}
+
 static void start_stage(void)
 {
 	static uint8_t stage_seq;
 
-	uint32_t seed = (uint32_t)(osGetTime() ^ ((uint64_t)(g_run.stage + 1) * 2654435761u));
+	uint32_t seed = fresh_seed();
 	rng_seed(seed);
-	int scene = rng_int(0, 4);
+	int scene = next_scene();
 
 	if (net_role() == NET_HOST) {
 		NetStage st;
@@ -337,23 +381,11 @@ static void start_net_match(void)
 
 /* ---------------- menus and global keys ---------------- */
 
-static void cycle_hero(int player, int delta)
-{
-	int id = g_run.hero_pick[player];
-	id = 1 + ((id - 1 + (delta > 0 ? 1 : 3)) % 4);
-	if (g_run.players == 2) {
-		int other = g_run.hero_pick[1 - player];
-		if (id == other)
-			id = 1 + (id % 4);
-	}
-	g_run.hero_pick[player] = id;
-}
-
 static int page_count(void)
 {
 	switch (g_page) {
 	case PAGE_HOME: return 2;
-	case PAGE_MODE: return 4;
+	case PAGE_MODE: return 3;
 	case PAGE_DIFF: return 3;
 	case PAGE_HERO: return 4;
 	case PAGE_SETTINGS: return 2;
@@ -466,9 +498,6 @@ static void handle_title(u32 down)
 		return;
 	}
 
-	if ((down & KEY_X) && g_page == PAGE_HERO && g_run.mode == MODE_LOCAL)
-		cycle_hero(1, 1);
-
 	if (!(down & KEY_A))
 		return;
 
@@ -482,8 +511,6 @@ static void handle_title(u32 down)
 	case PAGE_MODE:
 		g_run.mode = g_cursor;
 		g_run.players = g_cursor == MODE_SOLO ? 1 : 2;
-		if (g_run.players == 2 && g_run.hero_pick[1] == g_run.hero_pick[0])
-			cycle_hero(1, 1);
 		if (g_cursor >= MODE_HOST)
 			enter_page(PAGE_HERO, g_run.hero_pick[0] - 1);
 		else
@@ -495,8 +522,6 @@ static void handle_title(u32 down)
 		break;
 	case PAGE_HERO:
 		g_run.hero_pick[0] = g_cursor + 1;
-		if (g_run.mode == MODE_LOCAL && g_run.hero_pick[1] == g_run.hero_pick[0])
-			cycle_hero(1, 1);
 		if (g_run.mode >= MODE_HOST)
 			start_net_lobby();
 		else
@@ -661,8 +686,8 @@ static void render_title_top(void)
 	case PAGE_MODE:
 		dim_poster();
 		text_center(200.0f, 20.0f, 0.85f, 0xffffff, "选择模式");
-		for (int i = 0; i < 4; i++)
-			draw_menu_button(152.0f, 66.0f + i * 38.0f, MODE_NAMES[i], i == g_cursor);
+		for (int i = 0; i < 3; i++)
+			draw_menu_button(152.0f, 82.0f + i * 40.0f, MODE_NAMES[i], i == g_cursor);
 		text_center(200.0f, 222.0f, 0.4f, 0x93a0b5, "A 确认   B 返回");
 		break;
 	case PAGE_DIFF: {
@@ -684,16 +709,10 @@ static void render_title_top(void)
 			text_center(x + 28.0f, 136.0f, 0.6f, 0x1d4a66, HEROES[i].name);
 			if (i == g_cursor)
 				marker_frame(x - 8.0f, 46.0f, 72.0f, 114.0f, 0xffc93c);
-			if (g_run.mode == MODE_LOCAL && g_run.hero_pick[1] == i + 1) {
-				card_rect(x + 20.0f, 40.0f, 20.0f, 14.0f, 0x1d5f86, 1.0f);
-				text_center(x + 30.0f, 43.0f, 0.3f, 0xffffff, "2P");
-			}
 		}
 		text_center(200.0f, 176.0f, 0.62f, 0x1d4a66,
 		            HEROES[g_cursor].name);
-		text_center(200.0f, 200.0f, 0.4f, 0x2b6f9e,
-		            g_run.mode == MODE_LOCAL ? "A 确认   X 换 2P 角色   B 返回"
-		                                     : "A 确认   B 返回");
+		text_center(200.0f, 200.0f, 0.4f, 0x2b6f9e, "A 确认   B 返回");
 		break;
 	case PAGE_INFO:
 		render_info_top();
@@ -788,13 +807,8 @@ static void render_title_bottom(void)
 	card_rect(24.0f, y - 8.0f, 272.0f, 30.0f, act ? 0xffd9e8 : 0xffffff, 1.0f);
 	if (act)
 		card_rect(24.0f, y - 8.0f, 4.0f, 30.0f, c_active, 1.0f);
-	if (g_run.mode == MODE_LOCAL)
-		snprintf(line, sizeof(line), "角色  < %s >  < %s >",
-		         HEROES[g_run.hero_pick[0] - 1].name,
-		         HEROES[g_run.hero_pick[1] - 1].name);
-	else
-		snprintf(line, sizeof(line), "角色  < %s >",
-		         HEROES[g_run.hero_pick[0] - 1].name);
+	snprintf(line, sizeof(line), "角色  < %s >",
+	         HEROES[g_run.hero_pick[0] - 1].name);
 	text_center(160.0f, y, 0.62f, act ? c_active : c_normal, line);
 
 	y += 34.0f;
@@ -804,7 +818,7 @@ static void render_title_bottom(void)
 	const char* hint1 = "十字键 选择   A 确认";
 	const char* hint2 = "SELECT 设置   START 退出";
 	if (g_page == PAGE_HERO) {
-		hint1 = g_run.mode == MODE_LOCAL ? "A 确认   X 换 2P 角色" : "A 确认";
+		hint1 = "A 确认";
 		hint2 = "B 返回";
 	} else if (g_page == PAGE_INFO) {
 		hint1 = "A / B 返回";
@@ -825,7 +839,7 @@ static void render_title_bottom(void)
 		text_center(160.0f, 222.0f, 0.40f, 0xb35b6b, "音乐已关闭（SELECT 设置）");
 	else
 		text_center(160.0f, 222.0f, 0.40f, 0x8f6276,
-		            "1P 十字键+A   2P 摇杆+X");
+		            "十字键 移动   A 放炸弹");
 }
 
 static void render_hud(void)
