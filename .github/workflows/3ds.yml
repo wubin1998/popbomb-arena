@@ -34,13 +34,73 @@ jobs:
       - name: Build
         run: make -C ports/3ds -j"$(nproc)"
 
-      - name: Show artifact
-        run: ls -lh ports/3ds/popbomb-arena.3dsx
+      - name: Show artifacts
+        run: ls -lh ports/3ds/popbomb-arena.3dsx ports/3ds/popbomb-arena.elf
 
       - uses: actions/upload-artifact@v4
         with:
-          name: popbomb-arena-3dsx
-          path: ports/3ds/popbomb-arena.3dsx
+          name: 3ds-build
+          path: |
+            ports/3ds/popbomb-arena.3dsx
+            ports/3ds/popbomb-arena.elf
+            ports/3ds/romfs
+          if-no-files-found: error
+
+  package:
+    needs: build
+    # makerom/bannertool only run on the host: the devkitPro image ships an
+    # older glibc than their release binaries require.
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: 3ds-build
+          path: ports/3ds
+
+      - name: Install packaging tools
+        run: |
+          curl -fsSL -o /tmp/makerom.zip \
+            https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip
+          unzip -o -j /tmp/makerom.zip makerom -d /tmp/makerom
+          sudo install -m 755 /tmp/makerom/makerom /usr/local/bin/makerom
+          curl -fsSL -o /tmp/bannertool.tar.gz \
+            https://github.com/carstene1ns/3ds-bannertool/releases/download/1.2.3/bannertool-1.2.3-linux.tar.gz
+          mkdir -p /tmp/bannertool
+          tar xzf /tmp/bannertool.tar.gz -C /tmp/bannertool --strip-components=1
+          sudo install -m 755 /tmp/bannertool/bannertool /usr/local/bin/bannertool
+          makerom -v 2>&1 | head -2 || true
+
+      - name: Build SMDH, banner and CIA
+        working-directory: ports/3ds
+        run: |
+          python3 - <<'EOF'
+          import wave
+          src = wave.open("romfs/audio/menu.wav", "rb")
+          out = wave.open("/tmp/banner.wav", "wb")
+          out.setnchannels(src.getnchannels())
+          out.setsampwidth(src.getsampwidth())
+          out.setframerate(src.getframerate())
+          out.writeframes(src.readframes(min(src.getnframes(), src.getframerate() * 4)))
+          out.close()
+          src.close()
+          EOF
+          bannertool makesmdh -s "泡泡堂 大乱斗" -scs "泡泡堂 大乱斗" \
+            -l "Q版泡泡堂 3DS 移植版" -p wubin1998 \
+            -i cia/icon.png -o popbomb-arena.icn
+          bannertool makebanner -i cia/banner.png -a /tmp/banner.wav -o popbomb-arena.bnr
+          makerom -f cia -o popbomb-arena.cia -elf popbomb-arena.elf -rsf app.rsf \
+            -icon popbomb-arena.icn -banner popbomb-arena.bnr -exefslogo -target t
+          ls -lh popbomb-arena.cia
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: popbomb-arena-3ds
+          path: |
+            ports/3ds/popbomb-arena.3dsx
+            ports/3ds/popbomb-arena.cia
           if-no-files-found: error
 
       - name: Publish latest 3DS build
@@ -52,8 +112,14 @@ jobs:
           body: |
             Automated homebrew build from ${{ github.sha }}.
 
-            Install with FBI / hbmenu: copy `popbomb-arena.3dsx` to
-            `/3ds/popbomb-arena.3dsx` on the SD card and launch it from the
-            Homebrew Launcher. Press START to quit.
+            - `popbomb-arena.cia` — install with FBI (`Remote Install` or copy
+              to the SD card and pick *Install CIA*). It appears on the Home
+              Menu with its own icon and banner.
+            - `popbomb-arena.3dsx` — copy to `/3ds/popbomb-arena.3dsx` and
+              launch from the Homebrew Launcher.
+
+            Press START on the title screen to quit.
           prerelease: true
-          files: ports/3ds/popbomb-arena.3dsx
+          files: |
+            ports/3ds/popbomb-arena.3dsx
+            ports/3ds/popbomb-arena.cia
