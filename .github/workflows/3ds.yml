@@ -62,11 +62,11 @@ jobs:
 
       - name: Install packaging tools
         run: |
-          curl -fsSL -o /tmp/makerom.zip \
+          curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /tmp/makerom.zip \
             https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip
           unzip -o -j /tmp/makerom.zip makerom -d /tmp/makerom
           sudo install -m 755 /tmp/makerom/makerom /usr/local/bin/makerom
-          curl -fsSL -o /tmp/bannertool.tar.gz \
+          curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /tmp/bannertool.tar.gz \
             https://github.com/carstene1ns/3ds-bannertool/releases/download/1.2.3/bannertool-1.2.3-linux.tar.gz
           mkdir -p /tmp/bannertool
           tar xzf /tmp/bannertool.tar.gz -C /tmp/bannertool --strip-components=1
