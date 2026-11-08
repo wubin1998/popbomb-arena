@@ -65,6 +65,8 @@ jobs:
         continue-on-error: true
         run: |
           set -e
+          exec > >(tee /tmp/tools.log) 2>&1
+          trap 'status=$?; { echo "### Packaging tools log"; echo "```"; tail -30 /tmp/tools.log; echo "```"; } >> "$GITHUB_STEP_SUMMARY"; exit $status' EXIT
           fetch() { curl -fsSL --retry 4 --retry-delay 3 --retry-all-errors "$1" -o "$2"; }
 
           # Prebuilt binaries first. GitHub's release CDN has been returning
