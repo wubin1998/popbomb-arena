@@ -1,5 +1,8 @@
 name: Build 3DS homebrew
 
+# A push only rebuilds when it touches one of these paths; an empty commit
+# will not. To force a rebuild, touch a file under ports/3ds/ or use the
+# workflow_dispatch trigger.
 on:
   push:
     branches: [main]
