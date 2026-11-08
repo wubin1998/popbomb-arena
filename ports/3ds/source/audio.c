@@ -21,6 +21,11 @@
 #define MUSIC_RETRIES 3
 #define MUSIC_RETRY_FRAMES 90
 
+/* ndsp can initialize and still never consume the queue; that is as silent as
+   no audio at all. A working channel finishes a 48 KB buffer well inside this
+   window, so a longer gap means switching to CSND. */
+#define MUSIC_STALL_FRAMES 240
+
 typedef struct {
 	const char* name;
 	const char* path;
@@ -86,6 +91,7 @@ static int s_music_idx = -1;
 static int s_want_music = -1;
 static int s_retries;
 static int s_retry_wait;
+static int s_stall_frames;
 
 /* Without DSP firmware ndspInit fails on hardware, which made the whole game
    silent. CSND is the older sound service: it needs no firmware, so it carries
@@ -469,6 +475,39 @@ static void music_start(int idx)
 	s_music_error = false;
 	s_retries = 0;
 	s_retry_wait = 0;
+	s_stall_frames = 0;
+}
+
+/* Gives up on ndsp when its channel never plays anything and moves the whole
+   soundtrack to CSND. */
+static void failover_to_csnd(void)
+{
+	int idx = s_music_idx;
+
+	ndspChnReset(MUSIC_CH);
+	for (int i = 0; i < SFX_CHANNELS; i++)
+		ndspChnReset(SFX_FIRST_CH + i);
+	stream_close();
+	if (s_ms_mem) {
+		linearFree(s_ms_mem);
+		s_ms_mem = NULL;
+	}
+	ndspExit();
+
+	s_music_idx = -1;
+	s_retries = 0;
+	s_retry_wait = 0;
+	s_stall_frames = 0;
+
+	if (R_FAILED(csndInit())) {
+		s_ready = false;
+		s_music_error = true;
+		return;
+	}
+	s_csnd = true;
+	s_ready = true;
+	if (idx >= 0)
+		csnd_music_start(idx);
 }
 
 /* ---------------- public API ---------------- */
@@ -526,16 +565,26 @@ void audio_update(void)
 		return;
 
 	bool active = false;
+	bool progressed = false;
 	for (int i = 0; i < MUSIC_BUFS; i++) {
 		if (s_ms_wb[i].status == NDSP_WBUF_DONE) {
+			progressed = true;
 			if (stream_fill(i))
 				active = true;
 		} else if (s_ms_wb[i].status != NDSP_WBUF_FREE) {
 			active = true;
 		}
 	}
+	if (progressed) {
+		s_retries = 0;
+		s_retry_wait = 0;
+		s_stall_frames = 0;
+		return;
+	}
 	if (active) {
 		s_retry_wait = 0;
+		if (++s_stall_frames >= MUSIC_STALL_FRAMES)
+			failover_to_csnd();
 		return;
 	}
 
