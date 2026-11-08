@@ -35,7 +35,20 @@ jobs:
           which 3dsxtool tex3ds smdhtool
 
       - name: Build
-        run: make -C ports/3ds -j"$(nproc)"
+        run: |
+          set -o pipefail
+          make -C ports/3ds -j"$(nproc)" 2>&1 | tee /tmp/build.log
+
+      - name: Publish build log
+        if: failure()
+        run: |
+          git config user.email "ci@localhost"
+          git config user.name "ci"
+          git checkout -B ci-diag
+          cp /tmp/build.log build.log
+          git add -f build.log
+          git commit -m "ci build log"
+          git push --force origin ci-diag
 
       - name: Show artifacts
         run: ls -lh ports/3ds/popbomb-arena.3dsx ports/3ds/popbomb-arena.elf
