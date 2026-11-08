@@ -7,8 +7,14 @@
 #define MUSIC_CH 0
 #define SFX_FIRST_CH 1
 #define SFX_CHANNELS 8
-#define MUSIC_GAIN 0.28f
+#define MUSIC_GAIN 0.38f
 #define MAX_PCM_BYTES (16u * 1024u * 1024u)
+
+/* Music is streamed: a few small buffers refilled as the DSP finishes them.
+   Loading a whole 44s track into the linear heap failed on hardware, which
+   left the game silent while the short effects still played. */
+#define MUSIC_BUFS 3
+#define MUSIC_CHUNK (48u * 1024u)
 
 typedef struct {
 	const char* name;
@@ -49,15 +55,30 @@ typedef struct {
 	bool tried;
 } Clip;
 
+typedef struct {
+	long data_off;
+	u32 data_bytes;
+	int channels;
+	int rate;
+} WavInfo;
+
 static Clip s_clips[SOUND_COUNT];
-static ndspWaveBuf s_music_wb;
 static ndspWaveBuf s_sfx_wb[SFX_CHANNELS];
-static int s_music_idx = -1;
-static int s_want_music = -1;
 static int s_sfx_rr;
 static bool s_ready;
-static bool s_enabled = true;
+static bool s_music_on = true;
+static bool s_sfx_on = true;
 static bool s_error;
+static bool s_music_error;
+
+/* stream state */
+static FILE* s_ms_f;
+static WavInfo s_ms;
+static u32 s_ms_pos;
+static s16* s_ms_mem;
+static ndspWaveBuf s_ms_wb[MUSIC_BUFS];
+static int s_music_idx = -1;
+static int s_want_music = -1;
 
 static u16 rd16(const unsigned char* p)
 {
@@ -67,6 +88,63 @@ static u16 rd16(const unsigned char* p)
 static u32 rd32(const unsigned char* p)
 {
 	return (u32)p[0] | ((u32)p[1] << 8) | ((u32)p[2] << 16) | ((u32)p[3] << 24);
+}
+
+/* Reads the RIFF header and leaves the file positioned after the data chunk
+   header is skipped; data_off points at the first PCM byte. */
+static bool wav_parse(FILE* f, WavInfo* out)
+{
+	unsigned char hdr[12];
+	if (fread(hdr, 1, 12, f) != 12 || memcmp(hdr, "RIFF", 4) != 0 ||
+	    memcmp(hdr + 8, "WAVE", 4) != 0)
+		return false;
+
+	int format = 0, channels = 0, bits = 0;
+	long rate = 0;
+	long data_off = -1;
+	u32 data_size = 0;
+
+	for (int guard = 0; guard < 32; guard++) {
+		unsigned char chunk[8];
+		if (fread(chunk, 1, 8, f) != 8)
+			break;
+		u32 size = rd32(chunk + 4);
+		if (size > MAX_PCM_BYTES)
+			return false;
+		if (memcmp(chunk, "fmt ", 4) == 0) {
+			unsigned char fb[16];
+			if (size < 16 || fread(fb, 1, 16, f) != 16)
+				return false;
+			format = rd16(fb);
+			channels = rd16(fb + 2);
+			rate = (long)rd32(fb + 4);
+			bits = rd16(fb + 14);
+			long skip = (long)size - 16 + (long)(size & 1);
+			if (skip > 0 && fseek(f, skip, SEEK_CUR) != 0)
+				return false;
+		} else if (memcmp(chunk, "data", 4) == 0) {
+			data_off = ftell(f);
+			data_size = size;
+			if (data_off < 0)
+				return false;
+			if (fseek(f, (long)size + (long)(size & 1), SEEK_CUR) != 0)
+				return false;
+		} else if (fseek(f, (long)size + (long)(size & 1), SEEK_CUR) != 0) {
+			return false;
+		}
+		if (format && data_off >= 0)
+			break;
+	}
+
+	if (format != 1 || bits != 16 || (channels != 1 && channels != 2) ||
+	    rate < 8000 || rate > 48000 || data_off < 0 || data_size < 2)
+		return false;
+
+	out->data_off = data_off;
+	out->data_bytes = data_size & ~1u;
+	out->channels = channels;
+	out->rate = (int)rate;
+	return true;
 }
 
 static void clip_free(Clip* c)
@@ -87,73 +165,30 @@ static bool clip_load(int idx)
 	if (!f)
 		return false;
 
-	unsigned char hdr[12];
-	if (fread(hdr, 1, 12, f) != 12 || memcmp(hdr, "RIFF", 4) != 0 ||
-	    memcmp(hdr + 8, "WAVE", 4) != 0)
+	WavInfo info;
+	if (!wav_parse(f, &info))
 		goto fail;
 
-	int format = 0, channels = 0, bits = 0;
-	long rate = 0;
-	long data_off = -1;
-	u32 data_size = 0;
-
-	for (int guard = 0; guard < 32; guard++) {
-		unsigned char chunk[8];
-		if (fread(chunk, 1, 8, f) != 8)
-			break;
-		u32 size = rd32(chunk + 4);
-		if (size > MAX_PCM_BYTES)
-			goto fail;
-		if (memcmp(chunk, "fmt ", 4) == 0) {
-			unsigned char fb[16];
-			if (size < 16 || fread(fb, 1, 16, f) != 16)
-				goto fail;
-			format = rd16(fb);
-			channels = rd16(fb + 2);
-			rate = (long)rd32(fb + 4);
-			bits = rd16(fb + 14);
-			long skip = (long)size - 16 + (long)(size & 1);
-			if (skip > 0 && fseek(f, skip, SEEK_CUR) != 0)
-				goto fail;
-		} else if (memcmp(chunk, "data", 4) == 0) {
-			data_off = ftell(f);
-			data_size = size;
-			if (data_off < 0)
-				goto fail;
-			if (fseek(f, (long)size + (long)(size & 1), SEEK_CUR) != 0)
-				goto fail;
-		} else if (fseek(f, (long)size + (long)(size & 1), SEEK_CUR) != 0) {
-			goto fail;
-		}
-		if (format && data_off >= 0)
-			break;
-	}
-
-	if (format != 1 || bits != 16 || (channels != 1 && channels != 2) ||
-	    rate < 8000 || rate > 48000 || data_off < 0 || data_size < 2)
+	if ((u32)info.data_off + info.data_bytes > MAX_PCM_BYTES)
+		goto fail;
+	if (fseek(f, info.data_off, SEEK_SET) != 0)
 		goto fail;
 
-	u32 bytes = data_size & ~1u;
-	if (bytes > MAX_PCM_BYTES)
-		goto fail;
-	if (fseek(f, data_off, SEEK_SET) != 0)
-		goto fail;
-
-	s16* pcm = (s16*)linearAlloc(bytes);
+	s16* pcm = (s16*)linearAlloc(info.data_bytes);
 	if (!pcm)
 		goto fail;
-	if (fread(pcm, 1, bytes, f) != bytes) {
+	if (fread(pcm, 1, info.data_bytes, f) != info.data_bytes) {
 		linearFree(pcm);
 		goto fail;
 	}
 
-	DSP_FlushDataCache(pcm, bytes);
+	DSP_FlushDataCache(pcm, info.data_bytes);
 
 	c->pcm = pcm;
-	c->bytes = bytes;
-	c->nsamples = bytes / sizeof(s16);
-	c->channels = channels;
-	c->rate = (int)rate;
+	c->bytes = info.data_bytes;
+	c->nsamples = info.data_bytes / sizeof(s16);
+	c->channels = info.channels;
+	c->rate = info.rate;
 	c->loaded = true;
 	fclose(f);
 	return true;
@@ -174,18 +209,128 @@ static int find_sound(const char* name)
 	return -1;
 }
 
-static void channel_setup(int ch, const Clip* c, float gain)
+static void channel_setup(int ch, int channels, int rate, float gain)
 {
 	ndspChnReset(ch);
 	ndspChnSetInterp(ch, NDSP_INTERP_LINEAR);
-	ndspChnSetFormat(ch, c->channels == 2 ? NDSP_FORMAT_STEREO_PCM16
-	                                      : NDSP_FORMAT_MONO_PCM16);
-	ndspChnSetRate(ch, (float)c->rate);
+	ndspChnSetFormat(ch, channels == 2 ? NDSP_FORMAT_STEREO_PCM16
+	                                   : NDSP_FORMAT_MONO_PCM16);
+	ndspChnSetRate(ch, (float)rate);
 	float mix[12] = { 0 };
 	mix[0] = gain;
 	mix[1] = gain;
 	ndspChnSetMix(ch, mix);
 }
+
+/* ---------------- music stream ---------------- */
+
+static void stream_close(void)
+{
+	if (s_ms_f) {
+		fclose(s_ms_f);
+		s_ms_f = NULL;
+	}
+	s_ms_pos = 0;
+}
+
+/* Fills dst from the current track, wrapping to the start at the end so the
+   track loops seamlessly. */
+static u32 stream_read(s16* dst, u32 bytes)
+{
+	u32 got = 0;
+	while (got < bytes && s_ms_f) {
+		if (s_ms_pos >= s_ms.data_bytes) {
+			if (fseek(s_ms_f, s_ms.data_off, SEEK_SET) != 0)
+				break;
+			s_ms_pos = 0;
+		}
+		u32 rem = s_ms.data_bytes - s_ms_pos;
+		u32 want = bytes - got < rem ? bytes - got : rem;
+		want &= ~1u;
+		if (!want)
+			break;
+		if (fread((unsigned char*)dst + got, 1, want, s_ms_f) != want)
+			break;
+		got += want;
+		s_ms_pos += want;
+	}
+	if (got < bytes)
+		memset((unsigned char*)dst + got, 0, bytes - got);
+	return got;
+}
+
+static bool stream_fill(int slot)
+{
+	if (!s_ms_mem || !s_ms_f)
+		return false;
+
+	s16* buf = s_ms_mem + (size_t)slot * (MUSIC_CHUNK / sizeof(s16));
+	u32 got = stream_read(buf, MUSIC_CHUNK);
+	if (got < 2)
+		return false;
+
+	DSP_FlushDataCache(buf, got);
+
+	ndspWaveBuf* wb = &s_ms_wb[slot];
+	wb->data_vaddr = buf;
+	wb->nsamples = got / (u32)(sizeof(s16) * s_ms.channels);
+	wb->looping = false;
+	ndspChnWaveBufAdd(MUSIC_CH, wb);
+	return true;
+}
+
+static void music_halt(void)
+{
+	ndspChnReset(MUSIC_CH);
+	stream_close();
+	s_music_idx = -1;
+}
+
+static void music_start(int idx)
+{
+	music_halt();
+
+	FILE* f = fopen(SOUNDS[idx].path, "rb");
+	if (!f) {
+		s_music_error = true;
+		return;
+	}
+
+	WavInfo info;
+	if (!wav_parse(f, &info)) {
+		fclose(f);
+		s_music_error = true;
+		return;
+	}
+
+	if (!s_ms_mem) {
+		s_ms_mem = (s16*)linearAlloc(MUSIC_BUFS * MUSIC_CHUNK);
+		if (!s_ms_mem) {
+			fclose(f);
+			s_music_error = true;
+			return;
+		}
+	}
+
+	s_ms = info;
+	s_ms_pos = 0;
+	if (fseek(f, info.data_off, SEEK_SET) != 0) {
+		fclose(f);
+		return;
+	}
+	s_ms_f = f;
+
+	memset(s_ms_wb, 0, sizeof(s_ms_wb));
+	channel_setup(MUSIC_CH, info.channels, info.rate, MUSIC_GAIN);
+	for (int i = 0; i < MUSIC_BUFS; i++)
+		if (!stream_fill(i))
+			break;
+
+	s_music_idx = idx;
+	s_music_error = false;
+}
+
+/* ---------------- public API ---------------- */
 
 void audio_init(void)
 {
@@ -201,9 +346,15 @@ void audio_init(void)
 
 void audio_exit(void)
 {
+	if (s_ready)
+		music_halt();
+	stream_close();
+	if (s_ms_mem) {
+		linearFree(s_ms_mem);
+		s_ms_mem = NULL;
+	}
 	for (int i = 0; i < SOUND_COUNT; i++)
 		clip_free(&s_clips[i]);
-	s_music_idx = -1;
 	s_want_music = -1;
 	if (s_ready) {
 		ndspChnReset(MUSIC_CH);
@@ -214,9 +365,24 @@ void audio_exit(void)
 	s_ready = false;
 }
 
+/* Refills finished music buffers; call once per frame. */
+void audio_update(void)
+{
+	if (!s_ready || !s_music_on || s_music_idx < 0 || !s_ms_f)
+		return;
+	if (ndspChnIsPaused(MUSIC_CH))
+		return;
+	for (int i = 0; i < MUSIC_BUFS; i++) {
+		if (s_ms_wb[i].status == NDSP_WBUF_DONE) {
+			if (!stream_fill(i))
+				break;
+		}
+	}
+}
+
 bool audio_ok(void)
 {
-	return s_ready && !s_error;
+	return s_ready && !s_error && !s_music_error;
 }
 
 const char* audio_error_text(void)
@@ -224,22 +390,11 @@ const char* audio_error_text(void)
 	/* ndspInit needs the DSP firmware (/3ds/dspfirm.cdc or Luma's hb:ndsp). */
 	if (!s_ready)
 		return "音频关闭：未找到DSP固件";
+	if (s_music_error)
+		return "音频：音乐缓冲分配失败";
 	if (s_error)
-		return "音频关闭：音效加载失败";
+		return "音频：音效加载失败";
 	return NULL;
-}
-
-static void music_start(int idx)
-{
-	Clip* c = &s_clips[idx];
-	ndspChnReset(MUSIC_CH);
-	memset(&s_music_wb, 0, sizeof(s_music_wb));
-	s_music_wb.data_vaddr = c->pcm;
-	s_music_wb.nsamples = c->nsamples;
-	s_music_wb.looping = true;
-	channel_setup(MUSIC_CH, c, MUSIC_GAIN);
-	ndspChnWaveBufAdd(MUSIC_CH, &s_music_wb);
-	s_music_idx = idx;
 }
 
 void audio_music(const char* name)
@@ -248,19 +403,12 @@ void audio_music(const char* name)
 	if (idx < 0 || !SOUNDS[idx].music)
 		return;
 	s_want_music = idx;
-	if (!s_ready || !s_enabled)
+	if (!s_ready || !s_music_on)
 		return;
 	if (s_music_idx == idx) {
 		ndspChnSetPaused(MUSIC_CH, false);
 		return;
 	}
-	if (!clip_load(idx))
-		return;
-
-	ndspChnReset(MUSIC_CH);
-	if (s_music_idx >= 0)
-		clip_free(&s_clips[s_music_idx]);
-	s_music_idx = -1;
 	music_start(idx);
 }
 
@@ -269,8 +417,7 @@ void audio_stop_music(void)
 	s_want_music = -1;
 	if (!s_ready)
 		return;
-	ndspChnReset(MUSIC_CH);
-	s_music_idx = -1;
+	music_halt();
 }
 
 void audio_pause_music(void)
@@ -298,7 +445,7 @@ static int pick_sfx_channel(void)
 
 void audio_play_vol(const char* name, float volume)
 {
-	if (!s_ready || !s_enabled)
+	if (!s_ready || !s_sfx_on)
 		return;
 	int idx = find_sound(name);
 	if (idx < 0 || SOUNDS[idx].music)
@@ -309,7 +456,7 @@ void audio_play_vol(const char* name, float volume)
 	Clip* c = &s_clips[idx];
 	int ch = pick_sfx_channel();
 	int slot = ch - SFX_FIRST_CH;
-	channel_setup(ch, c, volume);
+	channel_setup(ch, c->channels, c->rate, volume);
 
 	ndspWaveBuf* wb = &s_sfx_wb[slot];
 	memset(wb, 0, sizeof(*wb));
@@ -326,17 +473,17 @@ void audio_play(const char* name)
 	audio_play_vol(name, volume);
 }
 
-void audio_set_enabled(bool on)
+void audio_set_music_enabled(bool on)
 {
-	if (s_enabled == on)
+	if (s_music_on == on)
 		return;
-	s_enabled = on;
+	s_music_on = on;
 	if (!s_ready)
 		return;
 	if (!on) {
-		audio_stop_music();
-		for (int i = 0; i < SFX_CHANNELS; i++)
-			ndspChnReset(SFX_FIRST_CH + i);
+		if (s_music_idx >= 0)
+			s_want_music = s_music_idx;
+		music_halt();
 	} else if (s_want_music >= 0) {
 		int idx = s_want_music;
 		s_want_music = -1;
@@ -344,7 +491,24 @@ void audio_set_enabled(bool on)
 	}
 }
 
-bool audio_enabled(void)
+void audio_set_sfx_enabled(bool on)
 {
-	return s_enabled;
+	if (s_sfx_on == on)
+		return;
+	s_sfx_on = on;
+	if (!s_ready)
+		return;
+	if (!on)
+		for (int i = 0; i < SFX_CHANNELS; i++)
+			ndspChnReset(SFX_FIRST_CH + i);
+}
+
+bool audio_music_enabled(void)
+{
+	return s_music_on;
+}
+
+bool audio_sfx_enabled(void)
+{
+	return s_sfx_on;
 }

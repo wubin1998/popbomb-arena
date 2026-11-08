@@ -9,6 +9,9 @@ void audio_init(void);
 void audio_exit(void);
 bool audio_ok(void);
 
+/* Refills the streaming music buffers; call once per frame. */
+void audio_update(void);
+
 /* NULL when audio is fine; otherwise a short line naming the failure. */
 const char* audio_error_text(void);
 
@@ -20,5 +23,7 @@ void audio_stop_music(void);
 void audio_pause_music(void);
 void audio_resume_music(void);
 
-void audio_set_enabled(bool on);
-bool audio_enabled(void);
+void audio_set_music_enabled(bool on);
+void audio_set_sfx_enabled(bool on);
+bool audio_music_enabled(void);
+bool audio_sfx_enabled(void);

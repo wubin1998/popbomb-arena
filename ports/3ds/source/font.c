@@ -5,16 +5,27 @@
 #include "assets.h"
 #include "zh_glyphs.h"
 
-static C2D_Image s_atlas;
+/* Native sizes, largest first: index 0 = 24px headings, 1 = 16px body text.
+   Glyphs are blitted 1:1, so the requested scale only selects a size. */
+static const int k_font_sets[ZH_FONT_COUNT] = { SET_ZH, SET_ZH16 };
+static C2D_Image s_atlas[ZH_FONT_COUNT];
 static bool s_ready;
+
+/* The draw API keeps taking a scale (call sites lay text out with one), but
+   anything below this is body text and snaps to the 16px atlas. */
+#define BODY_SCALE_CUT 0.73f
 
 void font_init(void)
 {
-	C2D_Image im = assets_frame(SET_ZH, 1);
-	if (!im.tex || !im.subtex)
-		return;
-	s_atlas = im;
-	s_ready = true;
+	int ok = 0;
+	for (int i = 0; i < ZH_FONT_COUNT; i++) {
+		C2D_Image im = assets_frame(k_font_sets[i], 1);
+		if (!im.tex || !im.subtex)
+			continue;
+		s_atlas[i] = im;
+		ok++;
+	}
+	s_ready = ok == ZH_FONT_COUNT;
 }
 
 void font_shutdown(void)
@@ -22,14 +33,19 @@ void font_shutdown(void)
 	s_ready = false;
 }
 
-static const ZhGlyph* find_glyph(uint32_t cp)
+static int font_index(float scale)
 {
-	int lo = 0, hi = ZH_GLYPH_COUNT - 1;
+	return scale < BODY_SCALE_CUT && ZH_FONT_COUNT > 1 ? 1 : 0;
+}
+
+static const ZhGlyph* find_glyph(const ZhFontDef* f, uint32_t cp)
+{
+	int lo = 0, hi = f->count - 1;
 	while (lo <= hi) {
 		int mid = (lo + hi) / 2;
-		if (ZH_GLYPHS[mid].cp == cp)
-			return &ZH_GLYPHS[mid];
-		if (ZH_GLYPHS[mid].cp < cp)
+		if (f->glyphs[mid].cp == cp)
+			return &f->glyphs[mid];
+		if (f->glyphs[mid].cp < cp)
 			lo = mid + 1;
 		else
 			hi = mid - 1;
@@ -72,18 +88,19 @@ static uint32_t utf8_next(const char** p)
 
 /* The atlas covers the whole tex3ds image (frame 0), so its subtexture maps
    the full PNG and we can derive any glyph rect from it. */
-static void make_subtex(Tex3DS_SubTexture* out, const ZhGlyph* g)
+static void make_subtex(Tex3DS_SubTexture* out, const C2D_Image* atlas,
+                        const ZhFontDef* f, const ZhGlyph* g)
 {
-	const Tex3DS_SubTexture* b = s_atlas.subtex;
+	const Tex3DS_SubTexture* b = atlas->subtex;
 	float du = b->right - b->left;
 	float dv = b->bottom - b->top;
 
 	out->width = g->w;
 	out->height = g->h;
-	out->left = b->left + (float)g->x / (float)b->width * du;
-	out->right = b->left + (float)(g->x + g->w) / (float)b->width * du;
-	out->top = b->top + (float)g->y / (float)b->height * dv;
-	out->bottom = b->top + (float)(g->y + g->h) / (float)b->height * dv;
+	out->left = b->left + (float)g->x / (float)f->atlas_w * du;
+	out->right = b->left + (float)(g->x + g->w) / (float)f->atlas_w * du;
+	out->top = b->top + (float)g->y / (float)f->atlas_h * dv;
+	out->bottom = b->top + (float)(g->y + g->h) / (float)f->atlas_h * dv;
 }
 
 static void tint_color(C2D_ImageTint* tint, uint32_t color)
@@ -99,35 +116,46 @@ void font_draw(float x, float y, float scale, uint32_t color, const char* text)
 	if (!s_ready || !text)
 		return;
 
+	int idx = font_index(scale);
+	const ZhFontDef* f = &ZH_FONTS[idx];
+	const C2D_Image* atlas = &s_atlas[idx];
+
+	/* Glyphs blit 1:1 at their native size. Only display text (the countdown,
+	   the lobby banner) asks for more than native, so scale that up. */
+	float k = (idx == 0 && scale > 1.05f) ? scale : 1.0f;
+
 	C2D_ImageTint tint;
 	tint_color(&tint, color);
 
 	float pen = x;
 	while (*text) {
-		const ZhGlyph* g = find_glyph(utf8_next(&text));
+		const ZhGlyph* g = find_glyph(f, utf8_next(&text));
 		if (!g)
 			continue;
 		if (g->w && g->h) {
 			Tex3DS_SubTexture sub;
-			make_subtex(&sub, g);
-			C2D_Image im = { s_atlas.tex, &sub };
-			C2D_DrawImageAt(im, pen + g->ox * scale, y + g->oy * scale,
-			                0.0f, &tint, scale, scale);
+			make_subtex(&sub, atlas, f, g);
+			C2D_Image im = { atlas->tex, &sub };
+			C2D_DrawImageAt(im, pen + g->ox * k, y + g->oy * k, 0.0f, &tint, k, k);
 		}
-		pen += g->adv * scale;
+		pen += g->adv * k;
 	}
 }
 
 float font_width(float scale, const char* text)
 {
-	if (!text)
+	if (!s_ready || !text)
 		return 0.0f;
+
+	int idx = font_index(scale);
+	const ZhFontDef* f = &ZH_FONTS[idx];
+	float k = (idx == 0 && scale > 1.05f) ? scale : 1.0f;
 
 	float w = 0.0f;
 	while (*text) {
-		const ZhGlyph* g = find_glyph(utf8_next(&text));
+		const ZhGlyph* g = find_glyph(f, utf8_next(&text));
 		if (g)
-			w += g->adv * scale;
+			w += g->adv * k;
 	}
 	return w;
 }
