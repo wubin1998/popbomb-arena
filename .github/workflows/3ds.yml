@@ -73,7 +73,7 @@ jobs:
           sudo install -m 755 /tmp/bannertool/bannertool /usr/local/bin/bannertool
           makerom -v 2>&1 | head -2 || true
 
-      - name: Build SMDH, banner and CIA
+      - name: Prepare banner audio
         working-directory: ports/3ds
         run: |
           python3 - <<'EOF'
@@ -87,10 +87,22 @@ jobs:
           out.close()
           src.close()
           EOF
+
+      - name: Build SMDH icon
+        working-directory: ports/3ds
+        run: |
           bannertool makesmdh -s "泡泡堂 大乱斗" -scs "泡泡堂 大乱斗" \
             -l "Q版泡泡堂 3DS 移植版" -p wubin1998 \
             -i cia/icon.png -o popbomb-arena.icn
+
+      - name: Build banner
+        working-directory: ports/3ds
+        run: |
           bannertool makebanner -i cia/banner.png -a /tmp/banner.wav -o popbomb-arena.bnr
+
+      - name: Build CIA
+        working-directory: ports/3ds
+        run: |
           makerom -f cia -o popbomb-arena.cia -elf popbomb-arena.elf -rsf app.rsf \
             -icon popbomb-arena.icn -banner popbomb-arena.bnr -exefslogo -target t
           ls -lh popbomb-arena.cia

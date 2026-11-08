@@ -10,7 +10,7 @@ RomFs:
 
 TitleInfo:
   Category                : Application
-  UniqueId                : 0x00B0B001
+  UniqueId                : 0x00B0B0
 
 Option:
   UseOnSD                 : true
