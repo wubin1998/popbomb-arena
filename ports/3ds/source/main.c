@@ -509,7 +509,8 @@ static void dim_poster(void)
 static void render_info_top(void)
 {
 	draw_icon(SET_TITLE, 1, 0.0f, 0.0f, 400.0f, 240.0f, 0.30f);
-	card_rect(0.0f, 0.0f, 400.0f, 240.0f, 0xfff2f7, 0.90f);
+	/* Solid face: the poster behind it made the small glyphs hard to read. */
+	card_rect(0.0f, 0.0f, 400.0f, 240.0f, 0xfff2f7, 1.0f);
 	card_rect(0.0f, 0.0f, 400.0f, 32.0f, 0xd94f86, 1.0f);
 	text_center(200.0f, 5.0f, 0.82f, 0xffffff, "道具");
 
@@ -519,11 +520,11 @@ static void render_info_top(void)
 		float x = 14.0f + col * 192.0f;
 		float y = 42.0f + row * 29.0f;
 		if (row % 2 == 0)
-			card_rect(x, y - 2.0f, 186.0f, 28.0f, 0xffffff, 0.70f);
+			card_rect(x, y - 2.0f, 186.0f, 28.0f, 0xffffff, 0.85f);
 		draw_icon(SET_TOOL, i + 1, x + 4.0f, y, 24.0f, 24.0f, 1.0f);
-		font_draw(x + 34.0f, y + 4.0f, 0.50f, 0x5a2a44, TOOLS[i].desc);
+		font_draw(x + 34.0f, y + 4.0f, 0.55f, 0x4a2338, TOOLS[i].desc);
 	}
-	text_center(200.0f, 218.0f, 0.40f, 0x9c7186, "A / B 返回");
+	text_center(200.0f, 218.0f, 0.40f, 0x7d5266, "A / B 返回");
 }
 
 static void render_title_top(void)
