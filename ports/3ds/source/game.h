@@ -42,6 +42,7 @@ enum {
 	SET_HERO3,
 	SET_HERO4,
 	SET_ZH,
+	SET_TITLE,
 	SET_COUNT
 };
 

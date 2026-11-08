@@ -111,6 +111,13 @@ static float clampf(float v, float a, float b)
 	return v < a ? a : (v > b ? b : v);
 }
 
+static void card_rect(float x, float y, float w, float h, uint32_t rgb, float a)
+{
+	C2D_DrawRectSolid(x, y, 0.0f, w, h,
+	                  C2D_Color32((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff,
+	                              (u32)(clampf(a, 0.0f, 1.0f) * 255.0f)));
+}
+
 static void shuffle_order(int* a, int n)
 {
 	for (int i = n - 1; i > 0; i--) {
@@ -434,37 +441,37 @@ static void handle_global(u32 down)
 
 /* ---------------- title screen ---------------- */
 
+/* The artwork is cropped to the 5:3 screens; dx slides it sideways for the
+   narrower bottom screen so both show the same picture. */
+static void draw_title_bg(float dx)
+{
+	draw_icon(SET_TITLE, 1, dx, 0.0f, 400.0f, 240.0f, 1.0f);
+}
+
 static void render_title_top(void)
 {
-	text_center(200.0f, 24.0f, 1.35f, 0xffffff, "泡泡堂 大乱斗");
-	text_center(200.0f, 66.0f, 0.55f, 0xb8c4d8, "3DS 自制程序版");
+	card_rect(0, 0, 400, 26, 0x000000, 0.45f);
+	text_center(200.0f, 6.0f, 0.42f, 0xffffff, "3DS 自制程序版  局域网联机");
 
-	float base = 200.0f - 2.0f * 74.0f;
-	for (int i = 0; i < 4; i++) {
-		float bob = sinf((float)osGetTime() / 420.0f + (float)i * 0.9f) * 5.0f;
-		draw_icon(SET_HERO1 + i, 4, base + (float)i * 74.0f + 8.0f, 118.0f + bob,
-		          58.0f, 92.0f, 1.0f);
-	}
-	text_center(200.0f, 214.0f, 0.45f, 0x8f9bb0, "A 确认   十字键 更改   START 退出");
+	card_rect(0, 196, 400, 44, 0x000000, 0.62f);
+	text_center(200.0f, 210.0f, 0.45f, 0xe8eef8, "A 确认   十字键 更改   START 退出");
+
 	const char* audio_msg = audio_error_text();
-	if (audio_msg)
-		text_center(200.0f, 88.0f, 0.40f, 0xff7d7d, audio_msg);
-	if (g_notice)
-		text_center(200.0f, 98.0f, 0.40f, 0xff7d7d, g_notice);
+	if (audio_msg || g_notice) {
+		card_rect(0, 148, 400, 44, 0x000000, 0.62f);
+		if (audio_msg)
+			text_center(200.0f, 155.0f, 0.40f, 0xff7d7d, audio_msg);
+		if (g_notice)
+			text_center(200.0f, 173.0f, 0.40f, 0xff7d7d, g_notice);
+	}
 }
 
 /* ---------------- bottom screen ---------------- */
 
-static void card_rect(float x, float y, float w, float h, uint32_t rgb, float a)
-{
-	C2D_DrawRectSolid(x, y, 0.0f, w, h,
-	                  C2D_Color32((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff,
-	                              (u32)(clampf(a, 0.0f, 1.0f) * 255.0f)));
-}
-
 static void render_title_bottom(void)
 {
-	card_rect(0, 0, 320, 240, 0x151a26, 1.0f);
+	draw_title_bg(-40.0f);
+	card_rect(0, 0, 320, 240, 0x151a26, 0.70f);
 	text_center(160.0f, 8.0f, 0.75f, 0xffffff, "游戏设置");
 
 	float y = 60.0f;
@@ -674,6 +681,7 @@ static void render(void)
 	C2D_TargetClear(s_top, C2D_Color32(0, 0, 0, 255));
 	C2D_SceneBegin(s_top);
 	if (g_screen == SCREEN_TITLE) {
+		draw_title_bg(0.0f);
 		render_title_top();
 	} else if (g_screen == SCREEN_LOBBY) {
 		render_lobby_top();
