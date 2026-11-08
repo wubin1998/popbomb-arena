@@ -1,0 +1,59 @@
+name: Build 3DS homebrew
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ports/3ds/**"
+      - "src/assets/img/**"
+      - ".github/workflows/3ds.yml"
+  pull_request:
+    paths:
+      - "ports/3ds/**"
+      - "src/assets/img/**"
+      - ".github/workflows/3ds.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:20260610
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain info
+        run: |
+          echo "DEVKITPRO=$DEVKITPRO DEVKITARM=$DEVKITARM"
+          arm-none-eabi-gcc --version | head -1
+          which 3dsxtool tex3ds smdhtool
+
+      - name: Build
+        run: make -C ports/3ds -j"$(nproc)"
+
+      - name: Show artifact
+        run: ls -lh ports/3ds/popbomb-arena.3dsx
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: popbomb-arena-3dsx
+          path: ports/3ds/popbomb-arena.3dsx
+          if-no-files-found: error
+
+      - name: Publish latest 3DS build
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: 3ds-latest
+          name: PopBomb Arena — 3DS (latest)
+          body: |
+            Automated homebrew build from ${{ github.sha }}.
+
+            Install with FBI / hbmenu: copy `popbomb-arena.3dsx` to
+            `/3ds/popbomb-arena.3dsx` on the SD card and launch it from the
+            Homebrew Launcher. Press START to quit.
+          prerelease: true
+          files: ports/3ds/popbomb-arena.3dsx

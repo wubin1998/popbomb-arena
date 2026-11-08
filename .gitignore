@@ -11,3 +11,11 @@ node_modules/
 # 本地临时文件
 *.tmp
 *.bak
+
+# 3DS 构建产物
+ports/3ds/build/
+ports/3ds/romfs/gfx/
+ports/3ds/*.3dsx
+ports/3ds/*.elf
+ports/3ds/*.smdh
+ports/3ds/*.map
