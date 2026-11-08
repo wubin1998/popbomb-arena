@@ -37,22 +37,20 @@ jobs:
       - name: Build
         run: |
           set -o pipefail
-          make -C ports/3ds -j"$(nproc)" 2>&1 | tee /tmp/build.log
+          make -C ports/3ds -j"$(nproc)" 2>&1 | tee build.log
 
-      - name: Publish build log
+      - name: Report build errors
         if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          [ -f /tmp/build.log ] || echo "build.log was not created" > /tmp/build.log
-          head -c 60000 /tmp/build.log > build.log
-          B64=$(base64 -w0 build.log)
-          API=https://api.github.com/repos/${{ github.repository }}
-          curl -s -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$API/git/refs/heads/ci-diag" || true
-          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" "$API/git/refs" \
-            -d "{\"ref\":\"refs/heads/ci-diag\",\"sha\":\"$GITHUB_SHA\"}" || true
-          curl -s -X PUT -H "Authorization: Bearer $GH_TOKEN" "$API/contents/build.log" \
-            -d "{\"message\":\"ci build log\",\"content\":\"$B64\",\"branch\":\"ci-diag\"}" > /dev/null || true
+          if [ ! -f build.log ]; then
+            echo "::error::build.log was not created"
+            exit 0
+          fi
+          grep -a -E "error:|Error [0-9]|No such file|undefined reference|cannot find|fatal|make.*\*\*\*" build.log \
+            | head -8 | while IFS= read -r line; do
+              echo "::error::$(printf '%s' "$line" | cut -c1-300)"
+            done
+          echo "::error::tail: $(tail -2 build.log | tr '\n' ' ' | cut -c1-300)"
 
       - name: Show artifacts
         run: ls -lh ports/3ds/popbomb-arena.3dsx ports/3ds/popbomb-arena.elf
