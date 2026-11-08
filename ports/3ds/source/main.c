@@ -441,20 +441,20 @@ static void handle_global(u32 down)
 
 /* ---------------- title screen ---------------- */
 
-/* The artwork is poster-only: every line of text lives on the bottom screen,
-   where a near-opaque panel keeps it legible over the picture. */
-static void draw_title_bg(float dx)
+/* The artwork is the top screen poster and nothing else: putting labels on
+   top of it made them hard to read, so the whole menu lives on the bottom. */
+static void draw_title_bg(void)
 {
-	draw_icon(SET_TITLE, 1, dx, 0.0f, 400.0f, 240.0f, 1.0f);
+	draw_icon(SET_TITLE, 1, 0.0f, 0.0f, 400.0f, 240.0f, 1.0f);
 }
 
 /* ---------------- bottom screen ---------------- */
 
 static void render_title_bottom(void)
 {
-	draw_title_bg(-40.0f);
-	card_rect(0, 0, 320, 240, 0x11151f, 0.92f);
-	text_center(160.0f, 8.0f, 0.75f, 0xffffff, "游戏设置");
+	card_rect(0, 0, 320, 240, 0x1b1622, 1.0f);
+	card_rect(0, 0, 320, 34, 0xd0558e, 1.0f);
+	text_center(160.0f, 7.0f, 0.72f, 0xffffff, "游戏设置");
 
 	float y = 46.0f;
 	for (int i = 0; i < ROW_COUNT; i++) {
@@ -671,7 +671,7 @@ static void render(void)
 	C2D_TargetClear(s_top, C2D_Color32(0, 0, 0, 255));
 	C2D_SceneBegin(s_top);
 	if (g_screen == SCREEN_TITLE) {
-		draw_title_bg(0.0f);
+		draw_title_bg();
 	} else if (g_screen == SCREEN_LOBBY) {
 		render_lobby_top();
 	} else {
