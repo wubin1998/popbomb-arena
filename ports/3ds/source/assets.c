@@ -9,7 +9,7 @@ static const char* const kSetNames[SET_COUNT] = {
 	"bg", "brick", "tool", "bomb", "exp", "brickExp", "heroExp", "dieSmoke",
 	"rocket", "rocketSmoke", "mine", "grenade", "gas", "fireEffect",
 	"freezeEffect", "pointer", "hero1", "hero2", "hero3", "hero4", "zh",
-	"title",
+	"title", "btn", "btnSel", "heroBg",
 };
 
 bool assets_load_all(void)

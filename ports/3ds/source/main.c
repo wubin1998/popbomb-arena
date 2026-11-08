@@ -12,7 +12,7 @@
 #define STEP_MS (1000.0 / 35.0)
 
 enum { SCREEN_TITLE = 0, SCREEN_GAME, SCREEN_RESULT, SCREEN_LOBBY };
-enum { ROW_PLAYERS = 0, ROW_DIFF, ROW_HERO, ROW_START, ROW_COUNT };
+enum { PAGE_HOME = 0, PAGE_MODE, PAGE_DIFF, PAGE_HERO, PAGE_INFO };
 enum { MODE_SOLO = 0, MODE_LOCAL, MODE_HOST, MODE_JOIN };
 
 static C3D_RenderTarget* s_top;
@@ -20,7 +20,8 @@ static C3D_RenderTarget* s_bottom;
 
 static Game g_game;
 static int g_screen = SCREEN_TITLE;
-static int g_selected = ROW_START;
+static int g_page = PAGE_HOME;
+static int g_cursor;
 static bool g_quit;
 
 typedef struct {
@@ -317,55 +318,92 @@ static void cycle_hero(int player, int delta)
 	g_run.hero_pick[player] = id;
 }
 
-static void cycle_mode(int dir)
+static int page_count(void)
 {
-	int m = (g_run.mode + 4 + (dir > 0 ? 1 : 3)) % 4;
-	g_run.mode = m;
-	g_run.players = m == MODE_SOLO ? 1 : 2;
-	if (g_run.players == 2 && g_run.hero_pick[1] == g_run.hero_pick[0])
-		cycle_hero(1, 1);
+	switch (g_page) {
+	case PAGE_HOME: return 2;
+	case PAGE_MODE: return 4;
+	case PAGE_DIFF: return 3;
+	case PAGE_HERO: return 4;
+	default: return 1;
+	}
+}
+
+static void enter_page(int page, int cursor)
+{
+	g_page = page;
+	g_cursor = cursor;
+}
+
+static void return_to_title(void)
+{
+	enter_page(PAGE_HOME, 0);
+	g_screen = SCREEN_TITLE;
+	audio_music("menu");
 }
 
 static void handle_title(u32 down)
 {
-	if (down & (KEY_DUP | KEY_CPAD_UP))
-		g_selected = (g_selected + ROW_COUNT - 1) % ROW_COUNT;
-	else if (down & (KEY_DDOWN | KEY_CPAD_DOWN))
-		g_selected = (g_selected + 1) % ROW_COUNT;
+	if (down & (KEY_DUP | KEY_DLEFT | KEY_CPAD_UP | KEY_CPAD_LEFT))
+		g_cursor = (g_cursor + page_count() - 1) % page_count();
+	else if (down & (KEY_DDOWN | KEY_DRIGHT | KEY_CPAD_DOWN | KEY_CPAD_RIGHT))
+		g_cursor = (g_cursor + 1) % page_count();
 
-	int dir = 0;
-	if (down & (KEY_DLEFT | KEY_CPAD_LEFT))
-		dir = -1;
-	else if (down & (KEY_DRIGHT | KEY_CPAD_RIGHT))
-		dir = 1;
-
-	if (dir != 0) {
-		if (g_selected == ROW_PLAYERS) {
-			cycle_mode(dir);
-		} else if (g_selected == ROW_DIFF) {
-			g_run.diff = (g_run.diff + 3 + dir) % 3;
-		} else if (g_selected == ROW_HERO) {
-			cycle_hero(0, dir);
-		}
-	}
-
-	if (down & KEY_A) {
-		if (g_selected == ROW_START) {
+	if (down & KEY_B) {
+		if (g_page == PAGE_MODE)
+			enter_page(PAGE_HOME, 0);
+		else if (g_page == PAGE_DIFF)
+			enter_page(PAGE_MODE, g_run.mode);
+		else if (g_page == PAGE_HERO) {
 			if (g_run.mode >= MODE_HOST)
-				start_net_lobby();
+				enter_page(PAGE_MODE, g_run.mode);
 			else
-				start_run();
-		} else if (g_selected == ROW_PLAYERS) {
-			cycle_mode(1);
-		} else if (g_selected == ROW_DIFF) {
-			g_run.diff = (g_run.diff + 1) % 3;
-		} else if (g_selected == ROW_HERO) {
-			cycle_hero(0, 1);
+				enter_page(PAGE_DIFF, g_run.diff);
 		}
+		else if (g_page == PAGE_INFO)
+			enter_page(PAGE_HOME, 1);
+		return;
 	}
-	if (down & KEY_X) {
-		if (g_run.mode == MODE_LOCAL)
+
+	if ((down & KEY_X) && g_page == PAGE_HERO && g_run.mode == MODE_LOCAL)
+		cycle_hero(1, 1);
+
+	if (!(down & KEY_A))
+		return;
+
+	switch (g_page) {
+	case PAGE_HOME:
+		if (g_cursor == 0)
+			enter_page(PAGE_MODE, g_run.mode);
+		else
+			enter_page(PAGE_INFO, 0);
+		break;
+	case PAGE_MODE:
+		g_run.mode = g_cursor;
+		g_run.players = g_cursor == MODE_SOLO ? 1 : 2;
+		if (g_run.players == 2 && g_run.hero_pick[1] == g_run.hero_pick[0])
 			cycle_hero(1, 1);
+		if (g_cursor >= MODE_HOST)
+			enter_page(PAGE_HERO, g_run.hero_pick[0] - 1);
+		else
+			enter_page(PAGE_DIFF, g_run.diff);
+		break;
+	case PAGE_DIFF:
+		g_run.diff = g_cursor;
+		enter_page(PAGE_HERO, g_run.hero_pick[0] - 1);
+		break;
+	case PAGE_HERO:
+		g_run.hero_pick[0] = g_cursor + 1;
+		if (g_run.mode == MODE_LOCAL && g_run.hero_pick[1] == g_run.hero_pick[0])
+			cycle_hero(1, 1);
+		if (g_run.mode >= MODE_HOST)
+			start_net_lobby();
+		else
+			start_run();
+		break;
+	case PAGE_INFO:
+		enter_page(PAGE_HOME, 1);
+		break;
 	}
 }
 
@@ -383,8 +421,7 @@ static void handle_global(u32 down)
 	if (g_screen == SCREEN_LOBBY) {
 		if (down & (KEY_B | KEY_SELECT)) {
 			leave_net();
-			audio_music("menu");
-			g_screen = SCREEN_TITLE;
+			return_to_title();
 		} else if (down & KEY_A) {
 			if (g_run.mode == MODE_HOST && net_peer_joined())
 				start_net_match();
@@ -399,13 +436,11 @@ static void handle_global(u32 down)
 				audio_pause_music();
 			else
 				audio_resume_music();
-			g_selected = ROW_START;
 		}
 		if (down & KEY_SELECT) {
 			leave_net();
 			audio_stop_music();
-			audio_music("menu");
-			g_screen = SCREEN_TITLE;
+			return_to_title();
 		}
 		return;
 	}
@@ -416,8 +451,7 @@ static void handle_global(u32 down)
 			if (g_game.stage_clear) {
 				if (g_game.final_stage) {
 					leave_net();
-					audio_music("menu");
-					g_screen = SCREEN_TITLE;
+					return_to_title();
 				} else {
 					g_run.stage++;
 					next_special_pair();
@@ -427,62 +461,164 @@ static void handle_global(u32 down)
 				start_stage();
 			} else {
 				leave_net();
-				audio_music("menu");
-				g_screen = SCREEN_TITLE;
+				return_to_title();
 			}
 		}
 		if (down & KEY_SELECT) {
 			leave_net();
-			audio_music("menu");
-			g_screen = SCREEN_TITLE;
+			return_to_title();
 		}
 	}
 }
 
 /* ---------------- title screen ---------------- */
 
-/* The artwork is the top screen poster and nothing else: putting labels on
-   top of it made them hard to read, so the whole menu lives on the bottom. */
 static void draw_title_bg(void)
 {
 	draw_icon(SET_TITLE, 1, 0.0f, 0.0f, 400.0f, 240.0f, 1.0f);
 }
 
+/* Corner brackets used as the selection marker. */
+static void marker_frame(float x, float y, float w, float h, uint32_t rgb)
+{
+	const float t = 2.0f, l = 11.0f;
+	card_rect(x, y, l, t, rgb, 1.0f);
+	card_rect(x, y, t, l, rgb, 1.0f);
+	card_rect(x + w - l, y, l, t, rgb, 1.0f);
+	card_rect(x + w - t, y, t, l, rgb, 1.0f);
+	card_rect(x, y + h - t, l, t, rgb, 1.0f);
+	card_rect(x, y + h - l, t, l, rgb, 1.0f);
+	card_rect(x + w - l, y + h - t, l, t, rgb, 1.0f);
+	card_rect(x + w - t, y + h - l, t, l, rgb, 1.0f);
+}
+
+static void draw_menu_button(float x, float y, const char* label, bool selected)
+{
+	draw_icon(selected ? SET_BTN_SEL : SET_BTN, 1, x, y, 96.0f, 30.0f, 1.0f);
+	text_center(x + 48.0f, y + 6.0f, 0.58f, 0xffffff, label);
+}
+
+static void dim_poster(void)
+{
+	draw_icon(SET_TITLE, 1, 0.0f, 0.0f, 400.0f, 240.0f, 0.45f);
+	card_rect(0.0f, 0.0f, 400.0f, 240.0f, 0x120e18, 0.45f);
+}
+
+static void render_info_top(void)
+{
+	dim_poster();
+	card_rect(26.0f, 24.0f, 348.0f, 192.0f, 0x241a2b, 0.96f);
+	card_rect(26.0f, 24.0f, 348.0f, 34.0f, 0xb23f78, 1.0f);
+	text_center(200.0f, 29.0f, 0.8f, 0xffffff, "玩法");
+	text_center(200.0f, 76.0f, 0.56f, 0xe8eef8, "炸开砖 找出道具");
+	text_center(200.0f, 106.0f, 0.56f, 0xe8eef8, "用炸弹 击败对手");
+	text_center(200.0f, 136.0f, 0.56f, 0xe8eef8, "时间 03:00 结束");
+	text_center(200.0f, 166.0f, 0.56f, 0xe8eef8, "被炸 生命 -1");
+	text_center(200.0f, 198.0f, 0.42f, 0x93a0b5, "A / B 返回");
+}
+
+static void render_title_top(void)
+{
+	switch (g_page) {
+	case PAGE_HOME:
+		draw_title_bg();
+		marker_frame(262.0f, g_cursor == 0 ? 145.0f : 189.0f, 116.0f, 34.0f,
+		             0xffd166);
+		break;
+	case PAGE_MODE:
+		dim_poster();
+		text_center(200.0f, 20.0f, 0.85f, 0xffffff, "选择模式");
+		for (int i = 0; i < 4; i++)
+			draw_menu_button(152.0f, 66.0f + i * 38.0f, MODE_NAMES[i], i == g_cursor);
+		text_center(200.0f, 222.0f, 0.4f, 0x93a0b5, "A 确认   B 返回");
+		break;
+	case PAGE_DIFF: {
+		dim_poster();
+		text_center(200.0f, 34.0f, 0.85f, 0xffffff, "选择难度");
+		for (int i = 0; i < 3; i++)
+			draw_menu_button(152.0f, 84.0f + i * 44.0f, DIFF_NAMES[i], i == g_cursor);
+		char buf[32];
+		snprintf(buf, sizeof(buf), "关卡数 %d", DIFF_STAGES[g_cursor]);
+		text_center(200.0f, 210.0f, 0.5f, 0xffd166, buf);
+		break;
+	}
+	case PAGE_HERO:
+		draw_icon(SET_HERO_BG, 1, 0.0f, 0.0f, 400.0f, 240.0f, 1.0f);
+		text_center(200.0f, 12.0f, 0.9f, 0x1d5f86, "选择角色");
+		for (int i = 0; i < 4; i++) {
+			float x = 46.0f + i * 84.0f;
+			draw_icon(HEROES[i].set_id, 4, x, 54.0f, 56.0f, 72.0f, 1.0f);
+			text_center(x + 28.0f, 136.0f, 0.6f, 0x1d4a66, HEROES[i].name);
+			if (i == g_cursor)
+				marker_frame(x - 8.0f, 46.0f, 72.0f, 114.0f, 0xffc93c);
+			if (g_run.mode == MODE_LOCAL && g_run.hero_pick[1] == i + 1) {
+				card_rect(x + 20.0f, 40.0f, 20.0f, 14.0f, 0x1d5f86, 1.0f);
+				text_center(x + 30.0f, 43.0f, 0.3f, 0xffffff, "2P");
+			}
+		}
+		text_center(200.0f, 176.0f, 0.62f, 0x1d4a66,
+		            HEROES[g_cursor].name);
+		text_center(200.0f, 200.0f, 0.4f, 0x2b6f9e,
+		            g_run.mode == MODE_LOCAL ? "A 确认   X 换 2P 角色   B 返回"
+		                                     : "A 确认   B 返回");
+		break;
+	case PAGE_INFO:
+		render_info_top();
+		break;
+	}
+}
+
 /* ---------------- bottom screen ---------------- */
+
+static const char* page_title(void)
+{
+	switch (g_page) {
+	case PAGE_MODE: return "选择模式";
+	case PAGE_DIFF: return "选择难度";
+	case PAGE_HERO: return "选择角色";
+	case PAGE_INFO: return "玩法";
+	default: return "游戏";
+	}
+}
 
 static void render_title_bottom(void)
 {
 	card_rect(0, 0, 320, 240, 0x1b1622, 1.0f);
 	card_rect(0, 0, 320, 34, 0xb23f78, 1.0f);
-	text_center(160.0f, 5.0f, 0.78f, 0xffffff, "游戏设置");
+	text_center(160.0f, 5.0f, 0.78f, 0xffffff, page_title());
 
-	float y = 46.0f;
-	for (int i = 0; i < ROW_COUNT; i++) {
-		char line[96];
-		if (i == ROW_PLAYERS)
-			snprintf(line, sizeof(line), "模式  < %s >", MODE_NAMES[g_run.mode]);
-		else if (i == ROW_DIFF)
-			snprintf(line, sizeof(line), "难度  < %s >", DIFF_NAMES[g_run.diff]);
-		else if (i == ROW_HERO)
-			snprintf(line, sizeof(line), "角色  < %s%s%s >",
-			         HEROES[g_run.hero_pick[0] - 1].name,
-			         g_run.players == 2 && g_run.mode != MODE_JOIN ? " / " : "",
-			         g_run.players == 2 && g_run.mode != MODE_JOIN
-			             ? HEROES[g_run.hero_pick[1] - 1].name : "");
-		else
-			snprintf(line, sizeof(line), "开始游戏");
+	char line[96];
+	float y = 52.0f;
+	snprintf(line, sizeof(line), "模式  < %s >", MODE_NAMES[g_run.mode]);
+	text_center(160.0f, y, 0.62f, g_page == PAGE_MODE ? 0xffd166 : 0xd7deea, line);
+	y += 34.0f;
+	snprintf(line, sizeof(line), "难度  < %s >", DIFF_NAMES[g_run.diff]);
+	text_center(160.0f, y, 0.62f, g_page == PAGE_DIFF ? 0xffd166 : 0xd7deea, line);
+	y += 34.0f;
+	if (g_run.mode == MODE_LOCAL)
+		snprintf(line, sizeof(line), "角色  < %s >  < %s >",
+		         HEROES[g_run.hero_pick[0] - 1].name,
+		         HEROES[g_run.hero_pick[1] - 1].name);
+	else
+		snprintf(line, sizeof(line), "角色  < %s >",
+		         HEROES[g_run.hero_pick[0] - 1].name);
+	text_center(160.0f, y, 0.62f, g_page == PAGE_HERO ? 0xffd166 : 0xd7deea, line);
 
-		uint32_t color = i == g_selected ? 0xffd166 : 0xd7deea;
-		if (i == g_selected) {
-			float w = font_width(0.72f, line);
-			font_draw(164.0f - w / 2.0f - 14.0f, y, 0.7f, 0xffd166, ">");
-		}
-		text_center(164.0f, y, 0.72f, color, line);
-		y += 36.0f;
+	y += 34.0f;
+	snprintf(line, sizeof(line), "关卡数  %d", DIFF_STAGES[g_run.diff]);
+	text_center(160.0f, y, 0.55f, 0x93a0b5, line);
+
+	const char* hint1 = "十字键 选择   A 确认";
+	const char* hint2 = "START 退出";
+	if (g_page == PAGE_HERO) {
+		hint1 = g_run.mode == MODE_LOCAL ? "A 确认   X 换 2P 角色" : "A 确认";
+		hint2 = "B 返回";
+	} else if (g_page != PAGE_HOME) {
+		hint1 = "十字键 选择   A 确认";
+		hint2 = "B 返回";
 	}
-
-	text_center(160.0f, 180.0f, 0.44f, 0xe8eef8, "A 确认   十字键 更改   START 退出");
-	text_center(160.0f, 198.0f, 0.40f, 0x93a0b5, "1P 十字键+A  2P 摇杆+X  X 换角色");
+	text_center(160.0f, 180.0f, 0.44f, 0xe8eef8, hint1);
+	text_center(160.0f, 198.0f, 0.44f, 0x93a0b5, hint2);
 
 	const char* audio_msg = audio_error_text();
 	if (audio_msg)
@@ -490,7 +626,8 @@ static void render_title_bottom(void)
 	else if (g_notice)
 		text_center(160.0f, 216.0f, 0.40f, 0xff7d7d, g_notice);
 	else
-		text_center(160.0f, 216.0f, 0.40f, 0x6f7c92, "关卡数  简单 15 / 普通 20 / 困难 25");
+		text_center(160.0f, 216.0f, 0.40f, 0x6f7c92,
+		            "1P 十字键+A   2P 摇杆+X");
 }
 
 static void render_hud(void)
@@ -671,7 +808,7 @@ static void render(void)
 	C2D_TargetClear(s_top, C2D_Color32(0, 0, 0, 255));
 	C2D_SceneBegin(s_top);
 	if (g_screen == SCREEN_TITLE) {
-		draw_title_bg();
+		render_title_top();
 	} else if (g_screen == SCREEN_LOBBY) {
 		render_lobby_top();
 	} else {
@@ -717,7 +854,8 @@ int main(void)
 	g_run.hero_pick[0] = 1;
 	g_run.hero_pick[1] = 2;
 	g_run.total_stage = DIFF_STAGES[g_run.diff];
-	g_selected = ROW_START;
+	g_page = PAGE_HOME;
+	g_cursor = 0;
 
 	audio_music("menu");
 
@@ -735,8 +873,7 @@ int main(void)
 			snprintf(notice_buf, sizeof(notice_buf), "%s", net_status());
 			leave_net();
 			g_notice = notice_buf;
-			audio_music("menu");
-			g_screen = SCREEN_TITLE;
+			return_to_title();
 		}
 
 		if (net_role() == NET_CLIENT

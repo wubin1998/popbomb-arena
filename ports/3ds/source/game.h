@@ -43,6 +43,9 @@ enum {
 	SET_HERO4,
 	SET_ZH,
 	SET_TITLE,
+	SET_BTN,
+	SET_BTN_SEL,
+	SET_HERO_BG,
 	SET_COUNT
 };
 
