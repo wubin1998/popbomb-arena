@@ -441,29 +441,11 @@ static void handle_global(u32 down)
 
 /* ---------------- title screen ---------------- */
 
-/* The artwork is cropped to the 5:3 screens; dx slides it sideways for the
-   narrower bottom screen so both show the same picture. */
+/* The artwork is poster-only: every line of text lives on the bottom screen,
+   where a near-opaque panel keeps it legible over the picture. */
 static void draw_title_bg(float dx)
 {
 	draw_icon(SET_TITLE, 1, dx, 0.0f, 400.0f, 240.0f, 1.0f);
-}
-
-static void render_title_top(void)
-{
-	card_rect(0, 0, 400, 26, 0x000000, 0.45f);
-	text_center(200.0f, 6.0f, 0.42f, 0xffffff, "3DS 自制程序版  局域网联机");
-
-	card_rect(0, 196, 400, 44, 0x000000, 0.62f);
-	text_center(200.0f, 210.0f, 0.45f, 0xe8eef8, "A 确认   十字键 更改   START 退出");
-
-	const char* audio_msg = audio_error_text();
-	if (audio_msg || g_notice) {
-		card_rect(0, 148, 400, 44, 0x000000, 0.62f);
-		if (audio_msg)
-			text_center(200.0f, 155.0f, 0.40f, 0xff7d7d, audio_msg);
-		if (g_notice)
-			text_center(200.0f, 173.0f, 0.40f, 0xff7d7d, g_notice);
-	}
 }
 
 /* ---------------- bottom screen ---------------- */
@@ -471,10 +453,10 @@ static void render_title_top(void)
 static void render_title_bottom(void)
 {
 	draw_title_bg(-40.0f);
-	card_rect(0, 0, 320, 240, 0x151a26, 0.70f);
+	card_rect(0, 0, 320, 240, 0x11151f, 0.92f);
 	text_center(160.0f, 8.0f, 0.75f, 0xffffff, "游戏设置");
 
-	float y = 60.0f;
+	float y = 46.0f;
 	for (int i = 0; i < ROW_COUNT; i++) {
 		char line[96];
 		if (i == ROW_PLAYERS)
@@ -496,11 +478,19 @@ static void render_title_bottom(void)
 			font_draw(164.0f - w / 2.0f - 14.0f, y, 0.7f, 0xffd166, ">");
 		}
 		text_center(164.0f, y, 0.72f, color, line);
-		y += 38.0f;
+		y += 36.0f;
 	}
 
-	text_center(160.0f, 198.0f, 0.46f, 0x93a0b5, "关卡数  简单 15 / 普通 20 / 困难 25");
-	text_center(160.0f, 216.0f, 0.44f, 0x6f7c92, "1P 十字键+A  2P 摇杆+X  X 换角色");
+	text_center(160.0f, 180.0f, 0.44f, 0xe8eef8, "A 确认   十字键 更改   START 退出");
+	text_center(160.0f, 198.0f, 0.40f, 0x93a0b5, "1P 十字键+A  2P 摇杆+X  X 换角色");
+
+	const char* audio_msg = audio_error_text();
+	if (audio_msg)
+		text_center(160.0f, 216.0f, 0.40f, 0xff7d7d, audio_msg);
+	else if (g_notice)
+		text_center(160.0f, 216.0f, 0.40f, 0xff7d7d, g_notice);
+	else
+		text_center(160.0f, 216.0f, 0.40f, 0x6f7c92, "关卡数  简单 15 / 普通 20 / 困难 25");
 }
 
 static void render_hud(void)
@@ -682,7 +672,6 @@ static void render(void)
 	C2D_SceneBegin(s_top);
 	if (g_screen == SCREEN_TITLE) {
 		draw_title_bg(0.0f);
-		render_title_top();
 	} else if (g_screen == SCREEN_LOBBY) {
 		render_lobby_top();
 	} else {
