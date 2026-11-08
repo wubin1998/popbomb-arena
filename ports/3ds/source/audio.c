@@ -14,7 +14,7 @@
    Loading a whole 44s track into the linear heap failed on hardware, which
    left the game silent while the short effects still played. */
 #define MUSIC_BUFS 3
-#define MUSIC_CHUNK (48u * 1024u)
+#define MUSIC_CHUNK (16u * 1024u)
 
 /* If the channel empties without the DSP asking for more, the queue was lost;
    restart the track, but not more than a few times. */
@@ -22,9 +22,9 @@
 #define MUSIC_RETRY_FRAMES 90
 
 /* ndsp can initialize and still never consume the queue; that is as silent as
-   no audio at all. A working channel finishes a 48 KB buffer well inside this
-   window, so a longer gap means switching to CSND. */
-#define MUSIC_STALL_FRAMES 240
+   no audio at all. A working channel finishes a 16 KB buffer in well under a
+   second, so a longer gap means switching to CSND. */
+#define MUSIC_STALL_FRAMES 90
 
 typedef struct {
 	const char* name;
@@ -100,6 +100,14 @@ static bool s_csnd;
 static Result s_init_result;
 static int s_csnd_music = -1;
 static s16* s_csnd_mem;
+static u32 s_csnd_bytes;
+static int s_csnd_rate;
+static int s_csnd_chs[CSND_NUM_CHANNELS];
+static int s_csnd_nch;
+static int s_csnd_pick;
+static int s_csnd_wait;
+static bool s_csnd_seen;
+static bool s_music_paused;
 static char s_err_buf[48];
 static char s_status_buf[32];
 
@@ -250,51 +258,68 @@ static void channel_setup(int ch, int channels, int rate, float gain)
 
 /* ---------------- CSND fallback ---------------- */
 
-static int csnd_find_channel(int start)
+/* Probing a channel costs a second or so of silence, so a few tries are enough
+   to tell a dead channel from a dead service. */
+#define CSND_PROBE_FRAMES 90
+#define CSND_PROBE_TRIES 3
+
+static void csnd_build_channels(void)
 {
-	for (int ch = start; ch < CSND_NUM_CHANNELS; ch++)
+	s_csnd_nch = 0;
+	for (int ch = 0; ch < CSND_NUM_CHANNELS; ch++)
 		if (csndChannels & (1u << ch))
-			return ch;
-	return -1;
+			s_csnd_chs[s_csnd_nch++] = ch;
+	s_csnd_pick = 0;
+	s_csnd_music = s_csnd_nch > 0 ? s_csnd_chs[0] : -1;
+	s_csnd_wait = 0;
+	s_csnd_seen = false;
 }
 
-static void csnd_music_halt(void)
+static bool csnd_music_active(void)
+{
+	u8 active = 0;
+	if (s_csnd_music < 0)
+		return false;
+	return R_SUCCEEDED(csndIsPlaying((u32)s_csnd_music, &active)) && active;
+}
+
+static void csnd_music_stop(void)
 {
 	if (s_csnd_music >= 0) {
 		CSND_SetPlayState((u32)s_csnd_music, 0);
 		csndExecCmds(true);
 	}
+}
+
+static void csnd_music_halt(void)
+{
+	csnd_music_stop();
 	if (s_csnd_mem) {
 		linearFree(s_csnd_mem);
 		s_csnd_mem = NULL;
 	}
+	s_csnd_bytes = 0;
 	s_music_idx = -1;
 }
 
 /* CSND takes a whole buffer instead of a stream, which suits it: its counter is
-   a byte count, not the 16-bit sample count that limited ndspWaveBuf. */
-static void csnd_music_start(int idx)
+   a byte count, not the 16-bit sample count that limited ndspWaveBuf. The
+   buffer outlives a failed channel so a retry does not read the file again. */
+static bool csnd_music_load(int idx)
 {
-	csnd_music_halt();
-
-	if (s_csnd_music < 0)
-		s_csnd_music = csnd_find_channel(0);
-	if (s_csnd_music < 0) {
-		s_music_error = true;
-		return;
+	if (s_csnd_mem) {
+		linearFree(s_csnd_mem);
+		s_csnd_mem = NULL;
 	}
 
 	FILE* f = fopen(SOUNDS[idx].path, "rb");
-	if (!f) {
-		s_music_error = true;
-		return;
-	}
+	if (!f)
+		return false;
 
 	WavInfo info;
 	if (!wav_parse(f, &info) || fseek(f, info.data_off, SEEK_SET) != 0) {
 		fclose(f);
-		s_music_error = true;
-		return;
+		return false;
 	}
 
 	u32 bytes = info.data_bytes & ~3u;
@@ -303,26 +328,77 @@ static void csnd_music_start(int idx)
 		if (pcm)
 			linearFree(pcm);
 		fclose(f);
-		s_music_error = true;
-		return;
+		return false;
 	}
 	fclose(f);
 	DSP_FlushDataCache(pcm, bytes);
 
+	s_csnd_mem = pcm;
+	s_csnd_bytes = bytes;
+	s_csnd_rate = info.rate;
+	return true;
+}
+
+static bool csnd_music_play(void)
+{
+	if (s_csnd_music < 0 || !s_csnd_mem)
+		return false;
+
 	u32 flags = SOUND_ENABLE | SOUND_FORMAT_16BIT | SOUND_REPEAT |
 	            SOUND_LINEAR_INTERP;
-	if (R_FAILED(csndPlaySound(s_csnd_music, flags, (u32)info.rate, MUSIC_GAIN,
-	                           0.0f, pcm, pcm, bytes))) {
-		linearFree(pcm);
+	if (R_FAILED(csndPlaySound(s_csnd_music, flags, (u32)s_csnd_rate, MUSIC_GAIN,
+	                           0.0f, s_csnd_mem, s_csnd_mem, s_csnd_bytes)))
+		return false;
+
+	/* Configuring a channel arms its registers; the play bits travel in their
+	   own command. Sending both covers either ordering the hardware wants. */
+	CSND_SetPlayState((u32)s_csnd_music, 1);
+	csndExecCmds(true);
+	s_csnd_wait = 0;
+	return true;
+}
+
+static void csnd_music_start(int idx)
+{
+	if (s_csnd_nch <= 0)
+		csnd_build_channels();
+	if (!csnd_music_load(idx) || !csnd_music_play()) {
+		csnd_music_halt();
 		s_music_error = true;
 		return;
 	}
-
-	s_csnd_mem = pcm;
 	s_music_idx = idx;
 	s_music_error = false;
+	s_music_paused = false;
 	s_retries = 0;
 	s_retry_wait = 0;
+}
+
+/* Moves the track to the next channel; false once the tries run out. */
+static bool csnd_music_retry(void)
+{
+	if (s_csnd_seen || s_csnd_pick + 1 >= s_csnd_nch ||
+	    s_csnd_pick + 1 >= CSND_PROBE_TRIES)
+		return false;
+	csnd_music_stop();
+	s_csnd_pick++;
+	s_csnd_music = s_csnd_chs[s_csnd_pick];
+	return csnd_music_play();
+}
+
+/* Asks the service whether the channel is running, and moves the track when it
+   never started: a channel the mixer leaves idle is as silent as a dead one. */
+static void csnd_update(void)
+{
+	if (s_csnd_seen || s_music_paused || s_music_idx < 0 || !s_csnd_mem)
+		return;
+	if (++s_csnd_wait < CSND_PROBE_FRAMES)
+		return;
+	s_csnd_wait = 0;
+	if (csnd_music_active())
+		s_csnd_seen = true;
+	else
+		csnd_music_retry();
 }
 
 static void csnd_music_pause(bool paused)
@@ -424,6 +500,7 @@ static void music_halt(void)
 	ndspChnReset(MUSIC_CH);
 	stream_close();
 	s_music_idx = -1;
+	s_music_paused = false;
 }
 
 static void music_start(int idx)
@@ -473,6 +550,7 @@ static void music_start(int idx)
 
 	s_music_idx = idx;
 	s_music_error = false;
+	s_music_paused = false;
 	s_retries = 0;
 	s_retry_wait = 0;
 	s_stall_frames = 0;
@@ -506,6 +584,7 @@ static void failover_to_csnd(void)
 	}
 	s_csnd = true;
 	s_ready = true;
+	csnd_build_channels();
 	if (idx >= 0)
 		csnd_music_start(idx);
 }
@@ -521,6 +600,7 @@ void audio_init(void)
 			return;
 		s_csnd = true;
 		s_ready = true;
+		csnd_build_channels();
 		return;
 	}
 	ndspSetOutputMode(NDSP_OUTPUT_STEREO);
@@ -559,9 +639,13 @@ void audio_exit(void)
 /* Refills finished music buffers; call once per frame. */
 void audio_update(void)
 {
-	if (!s_ready || s_csnd || !s_music_on || s_music_idx < 0 || !s_ms_f)
+	if (!s_ready || !s_music_on || s_music_idx < 0)
 		return;
-	if (ndspChnIsPaused(MUSIC_CH))
+	if (s_csnd) {
+		csnd_update();
+		return;
+	}
+	if (!s_ms_f || ndspChnIsPaused(MUSIC_CH))
 		return;
 
 	bool active = false;
@@ -615,16 +699,14 @@ const char* audio_status_text(void)
 	if (s_music_idx < 0)
 		return "音乐未播放";
 
-	bool playing;
-	if (s_csnd) {
-		u8 active = 0;
-		playing = R_SUCCEEDED(csndIsPlaying((u32)s_csnd_music, &active)) &&
-		          active;
-	} else {
-		playing = ndspChnIsPlaying(MUSIC_CH);
-	}
-	snprintf(s_status_buf, sizeof s_status_buf, "%s %s",
-	         playing ? "音乐播放中" : "音乐等待中", s_csnd ? "CSND" : "NDSP");
+	/* The channel number matters when a report comes back from a console: it
+	   says which channels the service handed out and which one ran. */
+	if (s_csnd)
+		snprintf(s_status_buf, sizeof s_status_buf, "%s CSND%d",
+		         csnd_music_active() ? "音乐播放中" : "音乐等待中", s_csnd_music);
+	else
+		snprintf(s_status_buf, sizeof s_status_buf, "%s NDSP",
+		         ndspChnIsPlaying(MUSIC_CH) ? "音乐播放中" : "音乐等待中");
 	return s_status_buf;
 }
 
@@ -657,6 +739,7 @@ void audio_music(const char* name)
 	if (!s_ready || !s_music_on)
 		return;
 	if (s_music_idx == idx) {
+		s_music_paused = false;
 		if (s_csnd)
 			csnd_music_pause(false);
 		else
@@ -678,6 +761,7 @@ void audio_pause_music(void)
 {
 	if (!s_ready || s_music_idx < 0)
 		return;
+	s_music_paused = true;
 	if (s_csnd)
 		csnd_music_pause(true);
 	else
@@ -688,6 +772,7 @@ void audio_resume_music(void)
 {
 	if (!s_ready || s_music_idx < 0)
 		return;
+	s_music_paused = false;
 	if (s_csnd)
 		csnd_music_pause(false);
 	else
