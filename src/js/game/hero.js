@@ -51,7 +51,6 @@
       this.alive = true;
       this.deadTimer = 0;
       this.age = BI.randInt(0, 30);
-      this.prevFire = false;
       this.lastFireTick = -99;
     }
 
@@ -83,6 +82,7 @@
       if (c && c.tool === "__ice") this.stopTime = 300;
 
       if (this.move) {
+        if (this.human) this.humanThink();
         this.advanceMove();
         return;
       }
@@ -175,19 +175,17 @@
     /* ---------------- input ---------------- */
     humanThink() {
       const st = BI.input.player(this.layout);
-      const order = [0, 1, 2, 3];
-      for (const d of order) {
-        if (st[["left", "up", "right", "down"][d]]) {
-          this.tryMove(d);
-          break;
+      if (!this.moving) {
+        for (const d of [0, 1, 2, 3]) {
+          if (st[["left", "up", "right", "down"][d]]) {
+            this.tryMove(d);
+            break;
+          }
         }
       }
-      const firing = st.fire || this.prevFire;
-      if (firing && !this.moving) {
-        this.prevFire = false;
-        this.tryFire();
-      }
-      if (this.moving && st.fire) this.prevFire = true;
+      // Checked every tick, including mid-move: holding fire while running
+      // drops bombs in the cells being left, so placement stays continuous.
+      if (st.fire) this.tryFire();
     }
 
     tryFire() {

@@ -203,6 +203,26 @@ void map_init(GameMap* m, int scene_id)
 		c->brick = 0;
 		c->frame = 0;
 	}
+
+	/* Never box a spawn in: if all four neighbours rolled bricks, open one. */
+	for (int i = 0; i < 4; i++) {
+		bool open = false;
+		for (int k = 0; k < 8; k += 2) {
+			Cell* n = map_cell(m, m->spawn_x[i] + AROUND[k][0],
+			                   m->spawn_y[i] + AROUND[k][1]);
+			if (n && !n->brick && !n->stone)
+				open = true;
+		}
+		if (open)
+			continue;
+		int k = 2 * rng_int(0, 3);
+		Cell* n = map_cell(m, m->spawn_x[i] + AROUND[k][0],
+		                   m->spawn_y[i] + AROUND[k][1]);
+		if (n) {
+			n->brick = 0;
+			n->frame = 0;
+		}
+	}
 }
 
 bool map_is_solid(GameMap* m, int x, int y)

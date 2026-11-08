@@ -67,6 +67,22 @@
         c.brick = false;
         c.frame = 0;
       }
+
+      // Never box a spawn in: if all four neighbours rolled bricks, open one.
+      const sides = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+      for (const s of this.spawns) {
+        const open = sides.some(([dx, dy]) => {
+          const n = this.cell(s.x + dx, s.y + dy);
+          return n && !n.brick && !n.stone;
+        });
+        if (open) continue;
+        const [dx, dy] = sides[BI.randInt(0, 3)];
+        const n = this.cell(s.x + dx, s.y + dy);
+        if (n) {
+          n.brick = false;
+          n.frame = 0;
+        }
+      }
     }
 
     // AS2 pocket-fill: unbreakables only go where the 8-cell ring around an
