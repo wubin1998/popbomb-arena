@@ -15,6 +15,9 @@ void audio_update(void);
 /* NULL when audio is fine; otherwise a short line naming the failure. */
 const char* audio_error_text(void);
 
+/* Short state line for the settings page. */
+const char* audio_status_text(void);
+
 void audio_play(const char* name);
 void audio_play_vol(const char* name, float volume);
 

@@ -16,6 +16,11 @@
 #define MUSIC_BUFS 3
 #define MUSIC_CHUNK (48u * 1024u)
 
+/* If the channel empties without the DSP asking for more, the queue was lost;
+   restart the track, but not more than a few times. */
+#define MUSIC_RETRIES 3
+#define MUSIC_RETRY_FRAMES 90
+
 typedef struct {
 	const char* name;
 	const char* path;
@@ -79,6 +84,8 @@ static s16* s_ms_mem;
 static ndspWaveBuf s_ms_wb[MUSIC_BUFS];
 static int s_music_idx = -1;
 static int s_want_music = -1;
+static int s_retries;
+static int s_retry_wait;
 
 static u16 rd16(const unsigned char* p)
 {
@@ -220,6 +227,9 @@ static void channel_setup(int ch, int channels, int rate, float gain)
 	mix[0] = gain;
 	mix[1] = gain;
 	ndspChnSetMix(ch, mix);
+	/* A reset channel starts unpaused, but a channel we paused earlier would
+	   swallow the buffers we are about to queue. */
+	ndspChnSetPaused(ch, false);
 }
 
 /* ---------------- music stream ---------------- */
@@ -328,6 +338,8 @@ static void music_start(int idx)
 
 	s_music_idx = idx;
 	s_music_error = false;
+	s_retries = 0;
+	s_retry_wait = 0;
 }
 
 /* ---------------- public API ---------------- */
@@ -372,12 +384,48 @@ void audio_update(void)
 		return;
 	if (ndspChnIsPaused(MUSIC_CH))
 		return;
+
+	bool active = false;
 	for (int i = 0; i < MUSIC_BUFS; i++) {
 		if (s_ms_wb[i].status == NDSP_WBUF_DONE) {
-			if (!stream_fill(i))
-				break;
+			if (stream_fill(i))
+				active = true;
+		} else if (s_ms_wb[i].status != NDSP_WBUF_FREE) {
+			active = true;
 		}
 	}
+	if (active) {
+		s_retry_wait = 0;
+		return;
+	}
+
+	/* Nothing is queued and nothing is playing: the channel lost its buffers.
+	   Re-queue the track, giving up after a few tries. */
+	if (s_retry_wait > 0) {
+		s_retry_wait--;
+		return;
+	}
+	if (s_retries >= MUSIC_RETRIES) {
+		s_music_error = true;
+		return;
+	}
+	s_retries++;
+	s_retry_wait = MUSIC_RETRY_FRAMES;
+	int idx = s_music_idx;
+	music_start(idx);
+}
+
+const char* audio_status_text(void)
+{
+	if (!s_ready)
+		return "音频未初始化";
+	if (!s_music_on)
+		return "音乐已关闭";
+	if (s_music_error)
+		return "音乐播放失败";
+	if (s_music_idx < 0)
+		return "音乐未播放";
+	return ndspChnIsPlaying(MUSIC_CH) ? "音乐播放中" : "音乐等待中";
 }
 
 bool audio_ok(void)
