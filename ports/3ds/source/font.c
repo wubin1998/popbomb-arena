@@ -90,7 +90,8 @@ static void tint_color(C2D_ImageTint* tint, uint32_t color)
 {
 	u32 c = C2D_Color32((color >> 16) & 0xff, (color >> 8) & 0xff,
 	                    color & 0xff, 255);
-	C2D_PlainImageTint(tint, c, 0.0f);
+	/* blend must be 1.0: at 0.0 citro2d returns the untinted texture (white). */
+	C2D_PlainImageTint(tint, c, 1.0f);
 }
 
 void font_draw(float x, float y, float scale, uint32_t color, const char* text)
