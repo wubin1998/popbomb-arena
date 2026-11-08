@@ -55,6 +55,21 @@ def collect_codepoints():
     return sorted(cps)
 
 
+def check_coverage(font_path, cps):
+    """Fail loudly when the font has no glyph for a character the UI uses.
+
+    PIL draws a .notdef box for those, which on the 3DS looked like tiny
+    crossed squares instead of text.
+    """
+    from fontTools.ttLib import TTFont
+
+    cmap = TTFont(font_path, fontNumber=0).getBestCmap()
+    missing = [cp for cp in cps if cp not in cmap]
+    if missing:
+        sys.exit("font is missing %d characters: %s"
+                 % (len(missing), "".join(chr(c) for c in missing)))
+
+
 def pow2_at_least(v):
     return 1 << max(0, (v - 1).bit_length())
 
@@ -118,6 +133,8 @@ def main():
 
     if not os.path.exists(args.font):
         sys.exit("font not found: %s" % args.font)
+
+    check_coverage(args.font, cps)
 
     if args.subset_out:
         from fontTools import subset
