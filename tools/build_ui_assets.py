@@ -100,6 +100,30 @@ def write_png(path, w, h, nch, pixels):
 
 # ---------------------------------------------------------------- poster
 
+def box_resize(w, h, nch, px, x0, y0, cw, ch, out_w, out_h):
+    """Box-average a source rectangle down to out_w x out_h."""
+    out = bytearray(out_w * out_h * 3)
+    for dy in range(out_h):
+        sy0 = y0 + dy * ch / out_h
+        sy1 = y0 + (dy + 1) * ch / out_h
+        for dx in range(out_w):
+            sx0 = x0 + dx * cw / out_w
+            sx1 = x0 + (dx + 1) * cw / out_w
+            r = g = b = n = 0
+            for sy in range(int(sy0), max(int(sy0) + 1, int(math.ceil(sy1)))):
+                for sx in range(int(sx0), max(int(sx0) + 1, int(math.ceil(sx1)))):
+                    i = (sy * w + sx) * nch
+                    r += px[i]
+                    g += px[i + 1]
+                    b += px[i + 2]
+                    n += 1
+            o = (dy * out_w + dx) * 3
+            out[o] = r // n
+            out[o + 1] = g // n
+            out[o + 2] = b // n
+    return out_w, out_h, 3, out
+
+
 def poster_crop(src):
     """Detect the game canvas (the grey page around it) and fit it to 400x240."""
     w, h, nch, px = read_png(src)
@@ -127,26 +151,31 @@ def poster_crop(src):
         y0 += (ch - keep_h) // 2
         ch = keep_h
 
-    out = bytearray(TITLE_W * TITLE_H * 3)
-    for dy in range(TITLE_H):
-        sy0 = y0 + dy * ch / TITLE_H
-        sy1 = y0 + (dy + 1) * ch / TITLE_H
-        for dx in range(TITLE_W):
-            sx0 = x0 + dx * cw / TITLE_W
-            sx1 = x0 + (dx + 1) * cw / TITLE_W
-            r = g = b = n = 0
-            for sy in range(int(sy0), max(int(sy0) + 1, int(math.ceil(sy1)))):
-                for sx in range(int(sx0), max(int(sx0) + 1, int(math.ceil(sx1)))):
-                    i = (sy * w + sx) * nch
-                    r += px[i]
-                    g += px[i + 1]
-                    b += px[i + 2]
-                    n += 1
-            o = (dy * TITLE_W + dx) * 3
-            out[o] = r // n
-            out[o + 1] = g // n
-            out[o + 2] = b // n
-    return TITLE_W, TITLE_H, 3, out
+    return box_resize(w, h, nch, px, x0, y0, cw, ch, TITLE_W, TITLE_H)
+
+
+def title_fit(src):
+    """Fit a clean 550x400 game canvas to 400x240, dropping the grey info bar.
+
+    The canvas is drawn with a screenshot's status strip (画质/音乐) along the
+    bottom; it is chrome from the page, not part of the art, so it is cut off
+    before the (slightly non-uniform) fit that keeps the whole composition."""
+    w, h, nch, px = read_png(src)
+
+    def is_bar(y):
+        n = 0
+        total = 0
+        for x in range(0, w, 4):
+            i = (y * w + x) * nch
+            total += 1
+            if (abs(px[i] - 102) <= 12 and abs(px[i + 1] - 92) <= 12
+                    and abs(px[i + 2] - 102) <= 12):
+                n += 1
+        return n > total * 0.10
+
+    bars = [y for y in range(h * 3 // 4, h) if is_bar(y)]
+    bottom = bars[0] if bars else h
+    return box_resize(w, h, nch, px, 0, 0, w, bottom, TITLE_W, TITLE_H)
 
 
 # ---------------------------------------------------------------- buttons
@@ -282,6 +311,7 @@ def write_t3s(name):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--poster", help="homepage screenshot (PNG) to re-crop into title.png")
+    ap.add_argument("--title", help="clean title-screen canvas (PNG) to fit into title.png")
     args = ap.parse_args()
 
     for name, data in (("btn", make_button(False)), ("btnSel", make_button(True)),
@@ -292,6 +322,11 @@ def main():
 
     if args.poster:
         data = poster_crop(args.poster)
+        write_png(os.path.join(GFX, "title.png"), *data)
+        print("wrote title.png %dx%d" % (data[0], data[1]))
+
+    if args.title:
+        data = title_fit(args.title)
         write_png(os.path.join(GFX, "title.png"), *data)
         print("wrote title.png %dx%d" % (data[0], data[1]))
 

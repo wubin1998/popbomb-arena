@@ -2,7 +2,9 @@
 #include <citro2d.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "assets.h"
 #include "audio.h"
@@ -10,9 +12,10 @@
 #include "net.h"
 
 #define STEP_MS (1000.0 / 35.0)
+#define CFG_PATH "sdmc:/3ds/popbomb-arena.cfg"
 
 enum { SCREEN_TITLE = 0, SCREEN_GAME, SCREEN_RESULT, SCREEN_LOBBY };
-enum { PAGE_HOME = 0, PAGE_MODE, PAGE_DIFF, PAGE_HERO, PAGE_INFO };
+enum { PAGE_HOME = 0, PAGE_MODE, PAGE_DIFF, PAGE_HERO, PAGE_INFO, PAGE_SETTINGS };
 enum { MODE_SOLO = 0, MODE_LOCAL, MODE_HOST, MODE_JOIN };
 
 static C3D_RenderTarget* s_top;
@@ -23,6 +26,9 @@ static int g_screen = SCREEN_TITLE;
 static int g_page = PAGE_HOME;
 static int g_cursor;
 static bool g_quit;
+static int g_pause_cursor;
+
+static const char* const PAUSE_ITEMS[4] = { "继续游戏", "重新开始", "返回首页", "退出游戏" };
 
 typedef struct {
 	int mode;
@@ -127,6 +133,31 @@ static void shuffle_order(int* a, int n)
 		a[i] = a[j];
 		a[j] = t;
 	}
+}
+
+static void settings_load(void)
+{
+	FILE* f = fopen(CFG_PATH, "r");
+	if (!f)
+		return;
+	char line[32];
+	while (fgets(line, sizeof(line), f)) {
+		if (strncmp(line, "music=", 6) == 0)
+			audio_set_music_enabled(atoi(line + 6) != 0);
+		else if (strncmp(line, "sfx=", 4) == 0)
+			audio_set_sfx_enabled(atoi(line + 4) != 0);
+	}
+	fclose(f);
+}
+
+static void settings_save(void)
+{
+	mkdir("sdmc:/3ds", 0777);
+	FILE* f = fopen(CFG_PATH, "w");
+	if (!f)
+		return;
+	fprintf(f, "music=%d\nsfx=%d\n", audio_music_enabled(), audio_sfx_enabled());
+	fclose(f);
 }
 
 /* ---------------- run / stage flow ---------------- */
@@ -325,6 +356,7 @@ static int page_count(void)
 	case PAGE_MODE: return 4;
 	case PAGE_DIFF: return 3;
 	case PAGE_HERO: return 4;
+	case PAGE_SETTINGS: return 2;
 	default: return 1;
 	}
 }
@@ -339,11 +371,80 @@ static void return_to_title(void)
 {
 	enter_page(PAGE_HOME, 0);
 	g_screen = SCREEN_TITLE;
+	g_game.paused = false;
 	audio_music("menu");
+}
+
+static void unpause(void)
+{
+	if (!g_game.paused)
+		return;
+	g_game.paused = false;
+	audio_resume_music();
+}
+
+static void handle_pause(u32 down)
+{
+	if (down & KEY_B) {
+		unpause();
+		return;
+	}
+	if (down & (KEY_DUP | KEY_DLEFT | KEY_CPAD_UP | KEY_CPAD_LEFT))
+		g_pause_cursor = (g_pause_cursor + 3) % 4;
+	if (down & (KEY_DDOWN | KEY_DRIGHT | KEY_CPAD_DOWN | KEY_CPAD_RIGHT))
+		g_pause_cursor = (g_pause_cursor + 1) % 4;
+	if (!(down & KEY_A))
+		return;
+
+	switch (g_pause_cursor) {
+	case 0:
+		unpause();
+		break;
+	case 1:
+		g_game.paused = false;
+		start_stage();
+		break;
+	case 2:
+		g_game.paused = false;
+		leave_net();
+		audio_stop_music();
+		return_to_title();
+		break;
+	case 3:
+		g_game.paused = false;
+		leave_net();
+		g_quit = true;
+		break;
+	}
+}
+
+static void handle_settings(u32 down)
+{
+	if (down & (KEY_B | KEY_SELECT)) {
+		enter_page(PAGE_HOME, 0);
+		return;
+	}
+	if (down & (KEY_DUP | KEY_DDOWN | KEY_CPAD_UP | KEY_CPAD_DOWN))
+		g_cursor ^= 1;
+	if (down & (KEY_DLEFT | KEY_DRIGHT | KEY_CPAD_LEFT | KEY_CPAD_RIGHT | KEY_A)) {
+		if (g_cursor == 0) {
+			audio_set_music_enabled(!audio_music_enabled());
+		} else {
+			audio_set_sfx_enabled(!audio_sfx_enabled());
+			if (audio_sfx_enabled())
+				audio_play("place");
+		}
+		settings_save();
+	}
 }
 
 static void handle_title(u32 down)
 {
+	if (g_page == PAGE_SETTINGS) {
+		handle_settings(down);
+		return;
+	}
+
 	if (down & (KEY_DUP | KEY_DLEFT | KEY_CPAD_UP | KEY_CPAD_LEFT))
 		g_cursor = (g_cursor + page_count() - 1) % page_count();
 	else if (down & (KEY_DDOWN | KEY_DRIGHT | KEY_CPAD_DOWN | KEY_CPAD_RIGHT))
@@ -414,6 +515,10 @@ static void handle_global(u32 down)
 			g_quit = true;
 			return;
 		}
+		if ((down & KEY_SELECT) && g_page != PAGE_SETTINGS) {
+			enter_page(PAGE_SETTINGS, 0);
+			return;
+		}
 		handle_title(down);
 		return;
 	}
@@ -430,18 +535,22 @@ static void handle_global(u32 down)
 	}
 
 	if (g_screen == SCREEN_GAME) {
-		if (down & KEY_START && net_role() == NET_OFF) {
+		if (down & KEY_SELECT) {
+			leave_net();
+			audio_stop_music();
+			return_to_title();
+			return;
+		}
+		if ((down & KEY_START) && net_role() == NET_OFF) {
 			g_game.paused = !g_game.paused;
+			g_pause_cursor = 0;
 			if (g_game.paused)
 				audio_pause_music();
 			else
 				audio_resume_music();
 		}
-		if (down & KEY_SELECT) {
-			leave_net();
-			audio_stop_music();
-			return_to_title();
-		}
+		if (g_game.paused)
+			handle_pause(down);
 		return;
 	}
 
@@ -527,12 +636,26 @@ static void render_info_top(void)
 	text_center(200.0f, 218.0f, 0.40f, 0x7d5266, "A / B 返回");
 }
 
+static void render_settings_top(void)
+{
+	dim_poster();
+	text_center(200.0f, 20.0f, 0.85f, 0xffffff, "设置");
+	for (int i = 0; i < 2; i++) {
+		float y = 78.0f + i * 48.0f;
+		bool on = i == 0 ? audio_music_enabled() : audio_sfx_enabled();
+		draw_menu_button(112.0f, y, i == 0 ? "音乐" : "音效", i == g_cursor);
+		text_center(240.0f, y + 7.0f, 0.65f, on ? 0x9cf0a8 : 0xff9b9b, on ? "开" : "关");
+	}
+	text_center(200.0f, 196.0f, 0.5f, 0xa8b4c8, "左右键 切换");
+	text_center(200.0f, 216.0f, 0.5f, 0x8f9bb0, "B / SELECT 返回");
+}
+
 static void render_title_top(void)
 {
 	switch (g_page) {
 	case PAGE_HOME:
 		draw_title_bg();
-		marker_frame(262.0f, g_cursor == 0 ? 145.0f : 189.0f, 116.0f, 34.0f,
+		marker_frame(262.0f, g_cursor == 0 ? 150.0f : 187.0f, 114.0f, 34.0f,
 		             0xffd166);
 		break;
 	case PAGE_MODE:
@@ -575,6 +698,9 @@ static void render_title_top(void)
 	case PAGE_INFO:
 		render_info_top();
 		break;
+	case PAGE_SETTINGS:
+		render_settings_top();
+		break;
 	}
 }
 
@@ -587,12 +713,46 @@ static const char* page_title(void)
 	case PAGE_DIFF: return "选择难度";
 	case PAGE_HERO: return "选择角色";
 	case PAGE_INFO: return "道具";
+	case PAGE_SETTINGS: return "设置";
 	default: return "游戏";
 	}
 }
 
+static void render_settings_bottom(void)
+{
+	card_rect(0, 0, 320, 240, 0xf3aec7, 1.0f);
+	card_rect(5, 5, 310, 230, 0xfff3f8, 1.0f);
+	card_rect(5, 5, 310, 34, 0xd94f86, 1.0f);
+	card_rect(5, 39, 310, 2, 0xe9c2d2, 1.0f);
+	text_center(160.0f, 7.0f, 0.8f, 0xffffff, page_title());
+
+	for (int i = 0; i < 2; i++) {
+		float y = 66.0f + i * 42.0f;
+		bool on = i == 0 ? audio_music_enabled() : audio_sfx_enabled();
+		bool act = i == g_cursor;
+		card_rect(24.0f, y - 8.0f, 272.0f, 30.0f, act ? 0xffd9e8 : 0xffffff, 1.0f);
+		if (act)
+			card_rect(24.0f, y - 8.0f, 4.0f, 30.0f, 0xc4376f, 1.0f);
+		font_draw(44.0f, y, 0.62f, act ? 0xc4376f : 0x5a2a44,
+		          i == 0 ? "音乐" : "音效");
+		text_center(252.0f, y, 0.62f, on ? 0x2e9e63 : 0xb35b6b, on ? "开" : "关");
+	}
+
+	text_center(160.0f, 156.0f, 0.5f, 0x7a4b62, "左右键 切换");
+	text_center(160.0f, 178.0f, 0.5f, 0x9c7186, "A 确认   B 返回");
+
+	const char* audio_msg = audio_error_text();
+	if (audio_msg)
+		text_center(160.0f, 210.0f, 0.46f, 0xc0392b, audio_msg);
+}
+
 static void render_title_bottom(void)
 {
+	if (g_page == PAGE_SETTINGS) {
+		render_settings_bottom();
+		return;
+	}
+
 	/* Pink card that matches the poster instead of a black panel; dark text on
 	   the cream face keeps the menu readable. */
 	card_rect(0, 0, 320, 240, 0xf3aec7, 1.0f);
@@ -642,7 +802,7 @@ static void render_title_bottom(void)
 	text_center(160.0f, y, 0.55f, c_muted, line);
 
 	const char* hint1 = "十字键 选择   A 确认";
-	const char* hint2 = "START 退出";
+	const char* hint2 = "SELECT 设置   START 退出";
 	if (g_page == PAGE_HERO) {
 		hint1 = g_run.mode == MODE_LOCAL ? "A 确认   X 换 2P 角色" : "A 确认";
 		hint2 = "B 返回";
@@ -732,10 +892,17 @@ static void render_hud(void)
 	}
 
 	if (g_game.paused) {
-		card_rect(0, 0, 320, 240, 0x000000, 0.62f);
-		text_center(160.0f, 84.0f, 1.1f, 0xffffff, "暂停");
-		text_center(160.0f, 130.0f, 0.5f, 0xc7d0de, "START 继续");
-		text_center(160.0f, 150.0f, 0.5f, 0xc7d0de, "SELECT 返回标题");
+		card_rect(0, 0, 320, 240, 0x000000, 0.72f);
+		text_center(160.0f, 24.0f, 0.95f, 0xffffff, "暂停");
+		for (int i = 0; i < 4; i++) {
+			float y = 62.0f + i * 38.0f;
+			bool sel = i == g_pause_cursor;
+			card_rect(58.0f, y - 6.0f, 204.0f, 32.0f, sel ? 0x2c3a56 : 0x1c2333, 1.0f);
+			if (sel)
+				card_rect(58.0f, y - 6.0f, 4.0f, 32.0f, 0xffd166, 1.0f);
+			text_center(160.0f, y, 0.62f, sel ? 0xffd166 : 0xffffff, PAUSE_ITEMS[i]);
+		}
+		text_center(160.0f, 218.0f, 0.42f, 0x93a0b5, "A 确认   B / START 继续");
 	}
 }
 
@@ -872,6 +1039,7 @@ static void render(void)
 int main(void)
 {
 	romfsInit();
+	sdmcInit();
 	audio_init();
 	gfxInitDefault();
 	C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -893,6 +1061,7 @@ int main(void)
 	g_page = PAGE_HOME;
 	g_cursor = 0;
 
+	settings_load();
 	audio_music("menu");
 
 	u64 last = osGetTime();
@@ -931,6 +1100,8 @@ int main(void)
 		}
 		if (g_quit)
 			break;
+
+		audio_update();
 
 		u64 now = osGetTime();
 		double dt = (double)(now - last);
@@ -984,5 +1155,6 @@ int main(void)
 	C3D_Fini();
 	gfxExit();
 	romfsExit();
+	sdmcExit();
 	return 0;
 }
