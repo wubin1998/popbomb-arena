@@ -212,7 +212,9 @@ jobs:
             - `popbomb-arena.3dsx` — copy to `/3ds/popbomb-arena.3dsx` and
               launch from the Homebrew Launcher.
 
-            Press START on the title screen to quit.
+            Controls: SELECT on the title screen opens 设置 (音乐 / 音效, saved to
+            the SD card). In game, START opens a pause menu (继续游戏 / 重新开始 /
+            返回首页 / 退出游戏) and SELECT returns straight to the title screen.
           prerelease: true
           files: ${{ steps.assets.outputs.files }}
 

@@ -1039,7 +1039,7 @@ static void render(void)
 int main(void)
 {
 	romfsInit();
-	sdmcInit();
+	fsInit();
 	audio_init();
 	gfxInitDefault();
 	C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
@@ -1155,6 +1155,6 @@ int main(void)
 	C3D_Fini();
 	gfxExit();
 	romfsExit();
-	sdmcExit();
+	fsExit();
 	return 0;
 }
