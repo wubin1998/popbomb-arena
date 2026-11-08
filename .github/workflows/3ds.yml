@@ -64,16 +64,39 @@ jobs:
         id: tools
         continue-on-error: true
         run: |
-          curl -fsSL --retry 10 --retry-delay 5 --retry-all-errors -o /tmp/makerom.zip \
-            https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip
-          unzip -o -j /tmp/makerom.zip makerom -d /tmp/makerom
-          sudo install -m 755 /tmp/makerom/makerom /usr/local/bin/makerom
-          curl -fsSL --retry 10 --retry-delay 5 --retry-all-errors -o /tmp/bannertool.tar.gz \
-            https://github.com/carstene1ns/3ds-bannertool/releases/download/1.2.3/bannertool-1.2.3-linux.tar.gz
-          mkdir -p /tmp/bannertool
-          tar xzf /tmp/bannertool.tar.gz -C /tmp/bannertool --strip-components=1
-          sudo install -m 755 /tmp/bannertool/bannertool /usr/local/bin/bannertool
+          set -e
+          fetch() { curl -fsSL --retry 4 --retry-delay 3 --retry-all-errors "$1" -o "$2"; }
+
+          # Prebuilt binaries first. GitHub's release CDN has been returning
+          # 504 for these for hours at a time, so fall back to building the
+          # tools from their source tarballs, which are served by codeload.
+          if fetch https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip /tmp/makerom.zip; then
+            unzip -o -j /tmp/makerom.zip makerom -d /tmp/makerom
+            sudo install -m 755 /tmp/makerom/makerom /usr/local/bin/makerom
+          else
+            echo "makerom download failed; building from source"
+            fetch https://codeload.github.com/3DSGuy/Project_CTR/tar.gz/refs/tags/makerom-v0.18.4 /tmp/project_ctr.tar.gz
+            tar xzf /tmp/project_ctr.tar.gz -C /tmp
+            make -C /tmp/Project_CTR-makerom-v0.18.4/makerom deps -j"$(nproc)"
+            make -C /tmp/Project_CTR-makerom-v0.18.4/makerom -j"$(nproc)"
+            sudo install -m 755 /tmp/Project_CTR-makerom-v0.18.4/makerom/makerom /usr/local/bin/makerom
+          fi
+
+          if fetch https://github.com/carstene1ns/3ds-bannertool/releases/download/1.2.3/bannertool-1.2.3-linux.tar.gz /tmp/bannertool.tar.gz; then
+            mkdir -p /tmp/bannertool
+            tar xzf /tmp/bannertool.tar.gz -C /tmp/bannertool --strip-components=1
+            sudo install -m 755 /tmp/bannertool/bannertool /usr/local/bin/bannertool
+          else
+            echo "bannertool download failed; building from source"
+            fetch https://codeload.github.com/carstene1ns/3ds-bannertool/tar.gz/refs/tags/1.2.3 /tmp/bannertool.tar.gz
+            tar xzf /tmp/bannertool.tar.gz -C /tmp
+            cmake -S /tmp/3ds-bannertool-1.2.3 -B /tmp/bannertool-build -DCMAKE_BUILD_TYPE=Release
+            cmake --build /tmp/bannertool-build -j"$(nproc)"
+            sudo install -m 755 /tmp/bannertool-build/bannertool /usr/local/bin/bannertool
+          fi
+
           makerom -v 2>&1 | head -2 || true
+          bannertool 2>&1 | head -2 || true
 
       - name: Prepare banner audio
         if: steps.tools.outcome == 'success'
