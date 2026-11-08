@@ -347,8 +347,10 @@ static void render_title_bottom(void)
 			snprintf(line, sizeof(line), "            START GAME");
 
 		uint32_t color = i == g_selected ? 0xffd166 : 0xd7deea;
-		if (i == g_selected)
-			text_center(160.0f, y - 8.0f, 0.7f, 0xffd166, ">");
+		if (i == g_selected) {
+			float w = font_width(0.72f, line);
+			font_draw(164.0f - w / 2.0f - 14.0f, y, 0.7f, 0xffd166, ">");
+		}
 		text_center(164.0f, y, 0.72f, color, line);
 		y += 38.0f;
 	}

@@ -45,6 +45,36 @@ php -S 127.0.0.1:8000
 
 ---
 
+## 3DS 自制程序版
+
+原生 `libctru` + `citro2d` 移植（非 SDL）：上屏 400 × 240 显示游戏区，下屏 320 × 240 显示比分、生命、炸弹数与特殊武器。
+
+- **下载**：Releases 的 `3ds-latest` 标签，文件 `popbomb-arena.3dsx`
+- **安装**：复制到 SD 卡 `/3ds/popbomb-arena.3dsx`，从 Homebrew Launcher 启动
+- **前提**：已安装 CFW 的 3DS；无需额外运行库
+
+| 操作 | 按键 |
+|---|---|
+| 移动（单人 / P1） | 十字键 |
+| 放炸弹 / 使用武器（单人 / P1） | `A` |
+| 移动（2P） | 摇杆 |
+| 放炸弹 / 使用武器（2P） | `X` |
+| 暂停 / 继续 | `START` |
+| 返回标题 | `SELECT` |
+| 退出程序（标题界面） | `START` |
+
+标题界面用十字键上下选择项目、左右修改，`A` 确认；双人模式下 `X` 切换 2P 角色。
+
+从源码构建需要 [devkitPro](https://devkitpro.org/)（devkitARM、libctru、citro2d、tex3ds）：
+
+```bash
+make -C ports/3ds
+```
+
+GitHub Actions（`.github/workflows/3ds.yml`）会在每次推送后自动构建并发布到 `3ds-latest`。音频由 `src/assets/audio/*.mp3` 转为 22.05 kHz 单声道 PCM16 WAV，放在 `ports/3ds/romfs/audio/`，通过 ndsp 播放。
+
+---
+
 ## 操作
 
 | 模式 | 移动 | 放炸弹 / 使用武器 |
@@ -121,6 +151,12 @@ popbomb-arena/
 │           ├── tools.js       道具表、掉落表
 │           ├── hero.js        移动、受伤、道具、AI
 │           └── game.js        关卡控制器、计时、胜负与计分
+├── ports/
+│   └── 3ds/                   3DS 原生移植（libctru + citro2d）
+│       ├── source/            游戏逻辑、渲染、HUD、音频
+│       ├── gfx/*.t3s          tex3ds 图集描述
+│       ├── romfs/             打包进 .3dsx 的图集与 WAV 音频
+│       └── Makefile
 ├── tools/
 │   ├── cdp_test.js            headless Chrome 冒烟测试
 │   ├── build_qpaopao_assets.py 素材裁剪/整理脚本
@@ -151,6 +187,12 @@ popbomb-arena/
 
 ## 更新记录
 
+### 2026-11-08
+
+- 新增 3DS 原生移植：citro2d 渲染、下屏 HUD、双人/单人、关卡与结算流程。
+- 3DS 音频：ndsp 播放循环 BGM 与全部音效。
+- GitHub Actions 自动构建 `.3dsx` 并发布到 `3ds-latest`。
+
 ### 2026-11-06
 
 - 游戏区放大：CSS 最大宽度提升到 900 px，HUD、菜单和结算面板同步放大。
@@ -172,7 +214,9 @@ popbomb-arena/
 - [ ] 排行榜、名字输入与最高分持久化
 - [ ] GitHub Actions 自动跑冒烟测试
 - [ ] 手柄支持
-- [ ] Switch 自制程序移植（可选，非官方）
+- [x] 3DS 自制程序移植（原生 citro2d + ndsp 音频）
+- [ ] NDS 烧录卡移植（评估中）
+- [ ] Switch 自制程序移植（需要破解，暂缓）
 
 联机对战不在当前范围内；本项目是单机/本地双人对战。
 
