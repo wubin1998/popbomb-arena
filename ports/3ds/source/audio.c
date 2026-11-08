@@ -57,6 +57,7 @@ static int s_want_music = -1;
 static int s_sfx_rr;
 static bool s_ready;
 static bool s_enabled = true;
+static bool s_error;
 
 static u16 rd16(const unsigned char* p)
 {
@@ -159,6 +160,7 @@ static bool clip_load(int idx)
 
 fail:
 	fclose(f);
+	s_error = true;
 	return false;
 }
 
@@ -214,7 +216,7 @@ void audio_exit(void)
 
 bool audio_ok(void)
 {
-	return s_ready;
+	return s_ready && !s_error;
 }
 
 static void music_start(int idx)

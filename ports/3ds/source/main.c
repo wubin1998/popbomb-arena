@@ -357,6 +357,8 @@ static void render_title_bottom(void)
 
 	text_center(160.0f, 198.0f, 0.48f, 0x93a0b5, "STAGES: EASY 15 / NORMAL 20 / HARD 25");
 	text_center(160.0f, 216.0f, 0.44f, 0x6f7c92, "1P DPAD+A   2P DPAD+A / CPAD+X   X: P2 HERO");
+	if (!audio_ok())
+		text_center(160.0f, 226.0f, 0.34f, 0xff7d7d, "AUDIO UNAVAILABLE");
 }
 
 static void render_hud(void)
