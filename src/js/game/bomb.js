@@ -70,12 +70,14 @@
     draw(ctx) {
       const img = BI.assets.get("bomb_" + (1 + (this.t % 40)));
       const cx = this.px + G / 2;
-      const by = this.py + G + 3;
+      // The sprite keeps its baked shadow in the bottom third, so the ball is
+      // anchored lower than the cell floor to keep it centred in the cell.
+      const by = this.py + G + 9;
       const s = 1.02;
       ctx.save();
       ctx.fillStyle = "rgba(0,0,0,0.22)";
       ctx.beginPath();
-      ctx.ellipse(cx, by - 2, 10, 4, 0, 0, BI.tau);
+      ctx.ellipse(cx, by - 7, 10, 4, 0, 0, BI.tau);
       ctx.fill();
       if (img && img.complete) {
         const w = BI.sw(img) * s;

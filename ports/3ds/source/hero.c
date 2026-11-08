@@ -57,7 +57,6 @@ void hero_init(Hero* h, Game* g, int slot, int hero_id, bool human, int layout,
 
 	h->alive = true;
 	h->age = rng_int(0, 30);
-	h->prev_fire = false;
 	h->last_fire_tick = -99;
 }
 
@@ -247,19 +246,19 @@ void hero_try_fire(Hero* h)
 static void hero_human_think(Hero* h)
 {
 	bool fire = input_fire_held(h->layout);
-	for (int d = 0; d < 4; d++) {
-		if (input_dir_held(h->layout, d)) {
-			hero_try_move(h, d);
-			break;
+	if (!h->moving) {
+		for (int d = 0; d < 4; d++) {
+			if (input_dir_held(h->layout, d)) {
+				hero_try_move(h, d);
+				break;
+			}
 		}
 	}
-	bool firing = fire || h->prev_fire;
-	if (firing && !h->moving) {
-		h->prev_fire = false;
+	/* Fire is checked every tick, including mid-move: holding the button while
+	   running drops a bomb in the cell being left, so bombs can be placed
+	   continuously instead of only after stopping. */
+	if (fire)
 		hero_try_fire(h);
-	}
-	if (h->moving && fire)
-		h->prev_fire = true;
 }
 
 bool hero_is_save_cell(Hero* h, int x, int y)
@@ -435,6 +434,8 @@ void hero_step(Hero* h)
 		h->stop_time = 300;
 
 	if (h->moving) {
+		if (h->human)
+			hero_human_think(h);
 		hero_advance_move(h);
 		return;
 	}

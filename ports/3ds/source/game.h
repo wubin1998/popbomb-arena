@@ -198,7 +198,6 @@ struct Hero {
 
 	bool alive;
 	int age;
-	bool prev_fire;
 	int last_fire_tick;
 };
 

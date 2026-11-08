@@ -229,15 +229,22 @@ static void draw_hero(Game* g, Hero* h)
 static void draw_bomb(Game* g, Bomb* b)
 {
 	(void)g;
+	/* The sprite keeps ~1/4 of its height as a baked shadow under the ball, so
+	   anchoring the sprite's bottom on the cell floor would leave the ball
+	   pressed against the top of the cell. Anchor lower so the ball sits in
+	   the cell instead. */
+	int frame = 1 + (b->t % 40);
 	float w, h;
-	img_size(SET_BOMB, 1, &w, &h);
+	img_size(SET_BOMB, frame, &w, &h);
+	if (w <= 0.0f)
+		return;
 	float cx = b->px + GRID / 2.0f;
-	float by = b->py + GRID + 3.0f;
+	float by = b->py + GRID + 9.0f;
 	float pulse = 1.0f + sinf((float)b->t * 0.6f) * 0.03f;
 	float dw = w * 1.02f * pulse;
 	float dh = h * 1.02f * pulse;
-	shadow(cx, by - 2.0f, 10.0f, 4.0f);
-	spr(SET_BOMB, 1 + (b->t % 40), cx - dw / 2.0f, by - dh, dw, dh, 1.0f);
+	shadow(cx, by - 7.0f, 10.0f, 4.0f);
+	spr(SET_BOMB, frame, cx - dw / 2.0f, by - dh, dw, dh, 1.0f);
 }
 
 static float weapon_row(Weapon* w)
