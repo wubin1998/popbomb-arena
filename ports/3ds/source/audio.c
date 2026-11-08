@@ -87,6 +87,15 @@ static int s_want_music = -1;
 static int s_retries;
 static int s_retry_wait;
 
+/* Without DSP firmware ndspInit fails on hardware, which made the whole game
+   silent. CSND is the older sound service: it needs no firmware, so it carries
+   the audio when ndsp is unavailable. */
+static bool s_csnd;
+static Result s_init_result;
+static int s_csnd_music = -1;
+static s16* s_csnd_mem;
+static char s_err_buf[48];
+
 static u16 rd16(const unsigned char* p)
 {
 	return (u16)(p[0] | (p[1] << 8));
@@ -232,6 +241,116 @@ static void channel_setup(int ch, int channels, int rate, float gain)
 	ndspChnSetPaused(ch, false);
 }
 
+/* ---------------- CSND fallback ---------------- */
+
+static int csnd_find_channel(int start)
+{
+	for (int ch = start; ch < CSND_NUM_CHANNELS; ch++)
+		if (csndChannels & (1u << ch))
+			return ch;
+	return -1;
+}
+
+static void csnd_music_halt(void)
+{
+	if (s_csnd_music >= 0) {
+		CSND_SetPlayState((u32)s_csnd_music, 0);
+		csndExecCmds(true);
+	}
+	if (s_csnd_mem) {
+		linearFree(s_csnd_mem);
+		s_csnd_mem = NULL;
+	}
+	s_music_idx = -1;
+}
+
+/* CSND takes a whole buffer instead of a stream, which suits it: its counter is
+   a byte count, not the 16-bit sample count that limited ndspWaveBuf. */
+static void csnd_music_start(int idx)
+{
+	csnd_music_halt();
+
+	if (s_csnd_music < 0)
+		s_csnd_music = csnd_find_channel(0);
+	if (s_csnd_music < 0) {
+		s_music_error = true;
+		return;
+	}
+
+	FILE* f = fopen(SOUNDS[idx].path, "rb");
+	if (!f) {
+		s_music_error = true;
+		return;
+	}
+
+	WavInfo info;
+	if (!wav_parse(f, &info) || fseek(f, info.data_off, SEEK_SET) != 0) {
+		fclose(f);
+		s_music_error = true;
+		return;
+	}
+
+	u32 bytes = info.data_bytes & ~3u;
+	s16* pcm = (s16*)linearAlloc(bytes);
+	if (!pcm || fread(pcm, 1, bytes, f) != bytes) {
+		if (pcm)
+			linearFree(pcm);
+		fclose(f);
+		s_music_error = true;
+		return;
+	}
+	fclose(f);
+	DSP_FlushDataCache(pcm, bytes);
+
+	u32 flags = SOUND_ENABLE | SOUND_FORMAT_16BIT | SOUND_REPEAT |
+	            SOUND_LINEAR_INTERP;
+	if (R_FAILED(csndPlaySound(s_csnd_music, flags, (u32)info.rate, MUSIC_GAIN,
+	                           0.0f, pcm, pcm, bytes))) {
+		linearFree(pcm);
+		s_music_error = true;
+		return;
+	}
+
+	s_csnd_mem = pcm;
+	s_music_idx = idx;
+	s_music_error = false;
+	s_retries = 0;
+	s_retry_wait = 0;
+}
+
+static void csnd_music_pause(bool paused)
+{
+	if (s_csnd_music < 0 || s_music_idx < 0)
+		return;
+	CSND_SetPlayState((u32)s_csnd_music, paused ? 0 : 1);
+	csndExecCmds(true);
+}
+
+static void csnd_sfx_play(int idx, float volume)
+{
+	Clip* c = &s_clips[idx];
+	int ch = -1;
+	for (int i = 0; i < CSND_NUM_CHANNELS; i++) {
+		if (i == s_csnd_music || !(csndChannels & (1u << i)))
+			continue;
+		u8 active = 1;
+		if (R_SUCCEEDED(csndIsPlaying((u32)i, &active)) && !active) {
+			ch = i;
+			break;
+		}
+	}
+	for (int i = 0; ch < 0 && i < CSND_NUM_CHANNELS; i++)
+		if (i != s_csnd_music && (csndChannels & (1u << i)))
+			ch = i;
+	if (ch < 0)
+		return;
+
+	u32 flags = SOUND_ENABLE | SOUND_FORMAT_16BIT | SOUND_ONE_SHOT |
+	            SOUND_LINEAR_INTERP;
+	csndPlaySound(ch, flags, (u32)c->rate, volume, 0.0f, c->pcm, c->pcm,
+	              c->bytes & ~3u);
+}
+
 /* ---------------- music stream ---------------- */
 
 static void stream_close(void)
@@ -291,6 +410,10 @@ static bool stream_fill(int slot)
 
 static void music_halt(void)
 {
+	if (s_csnd) {
+		csnd_music_halt();
+		return;
+	}
 	ndspChnReset(MUSIC_CH);
 	stream_close();
 	s_music_idx = -1;
@@ -298,6 +421,11 @@ static void music_halt(void)
 
 static void music_start(int idx)
 {
+	if (s_csnd) {
+		csnd_music_start(idx);
+		return;
+	}
+
 	music_halt();
 
 	FILE* f = fopen(SOUNDS[idx].path, "rb");
@@ -346,8 +474,15 @@ static void music_start(int idx)
 
 void audio_init(void)
 {
-	if (R_FAILED(ndspInit()))
+	s_init_result = ndspInit();
+	if (R_FAILED(s_init_result)) {
+		s_init_result = csndInit();
+		if (R_FAILED(s_init_result))
+			return;
+		s_csnd = true;
+		s_ready = true;
 		return;
+	}
 	ndspSetOutputMode(NDSP_OUTPUT_STEREO);
 	ndspSetMasterVol(1.0f);
 	for (int i = 0; i < SFX_CHANNELS; i++)
@@ -369,10 +504,14 @@ void audio_exit(void)
 		clip_free(&s_clips[i]);
 	s_want_music = -1;
 	if (s_ready) {
-		ndspChnReset(MUSIC_CH);
-		for (int i = 0; i < SFX_CHANNELS; i++)
-			ndspChnReset(SFX_FIRST_CH + i);
-		ndspExit();
+		if (s_csnd) {
+			csndExit();
+		} else {
+			ndspChnReset(MUSIC_CH);
+			for (int i = 0; i < SFX_CHANNELS; i++)
+				ndspChnReset(SFX_FIRST_CH + i);
+			ndspExit();
+		}
 	}
 	s_ready = false;
 }
@@ -380,7 +519,7 @@ void audio_exit(void)
 /* Refills finished music buffers; call once per frame. */
 void audio_update(void)
 {
-	if (!s_ready || !s_music_on || s_music_idx < 0 || !s_ms_f)
+	if (!s_ready || s_csnd || !s_music_on || s_music_idx < 0 || !s_ms_f)
 		return;
 	if (ndspChnIsPaused(MUSIC_CH))
 		return;
@@ -425,6 +564,12 @@ const char* audio_status_text(void)
 		return "音乐播放失败";
 	if (s_music_idx < 0)
 		return "音乐未播放";
+	if (s_csnd) {
+		u8 active = 0;
+		if (R_SUCCEEDED(csndIsPlaying((u32)s_csnd_music, &active)) && active)
+			return "音乐播放中";
+		return "音乐等待中";
+	}
 	return ndspChnIsPlaying(MUSIC_CH) ? "音乐播放中" : "音乐等待中";
 }
 
@@ -435,9 +580,12 @@ bool audio_ok(void)
 
 const char* audio_error_text(void)
 {
-	/* ndspInit needs the DSP firmware (/3ds/dspfirm.cdc or Luma's hb:ndsp). */
-	if (!s_ready)
-		return "音频关闭：未找到DSP固件";
+	/* Both sound services failed; the code says which one and why. */
+	if (!s_ready) {
+		snprintf(s_err_buf, sizeof s_err_buf, "音频初始化失败 %08lX",
+		         (unsigned long)(u32)s_init_result);
+		return s_err_buf;
+	}
 	if (s_music_error)
 		return "音频：音乐缓冲分配失败";
 	if (s_error)
@@ -454,7 +602,10 @@ void audio_music(const char* name)
 	if (!s_ready || !s_music_on)
 		return;
 	if (s_music_idx == idx) {
-		ndspChnSetPaused(MUSIC_CH, false);
+		if (s_csnd)
+			csnd_music_pause(false);
+		else
+			ndspChnSetPaused(MUSIC_CH, false);
 		return;
 	}
 	music_start(idx);
@@ -470,13 +621,21 @@ void audio_stop_music(void)
 
 void audio_pause_music(void)
 {
-	if (s_ready && s_music_idx >= 0)
+	if (!s_ready || s_music_idx < 0)
+		return;
+	if (s_csnd)
+		csnd_music_pause(true);
+	else
 		ndspChnSetPaused(MUSIC_CH, true);
 }
 
 void audio_resume_music(void)
 {
-	if (s_ready && s_music_idx >= 0)
+	if (!s_ready || s_music_idx < 0)
+		return;
+	if (s_csnd)
+		csnd_music_pause(false);
+	else
 		ndspChnSetPaused(MUSIC_CH, false);
 }
 
@@ -500,6 +659,11 @@ void audio_play_vol(const char* name, float volume)
 		return;
 	if (!clip_load(idx))
 		return;
+
+	if (s_csnd) {
+		csnd_sfx_play(idx, volume);
+		return;
+	}
 
 	Clip* c = &s_clips[idx];
 	int ch = pick_sfx_channel();
@@ -546,9 +710,17 @@ void audio_set_sfx_enabled(bool on)
 	s_sfx_on = on;
 	if (!s_ready)
 		return;
-	if (!on)
-		for (int i = 0; i < SFX_CHANNELS; i++)
-			ndspChnReset(SFX_FIRST_CH + i);
+	if (!on) {
+		if (s_csnd) {
+			for (int ch = 0; ch < CSND_NUM_CHANNELS; ch++)
+				if (ch != s_csnd_music && (csndChannels & (1u << ch)))
+					CSND_SetPlayState((u32)ch, 0);
+			csndExecCmds(true);
+		} else {
+			for (int i = 0; i < SFX_CHANNELS; i++)
+				ndspChnReset(SFX_FIRST_CH + i);
+		}
+	}
 }
 
 bool audio_music_enabled(void)
