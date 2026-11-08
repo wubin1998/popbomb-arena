@@ -181,3 +181,14 @@ jobs:
             Press START on the title screen to quit.
           prerelease: true
           files: ${{ steps.assets.outputs.files }}
+
+      # The tools step tolerates failure so a transient download problem cannot
+      # block the .3dsx, but shipping a release without its .cia must not pass
+      # silently. Publish first, then fail.
+      - name: Require the CIA
+        if: github.event_name != 'pull_request'
+        run: |
+          if [ ! -f ports/3ds/popbomb-arena.cia ]; then
+            echo "::error::popbomb-arena.cia was not built; see the packaging tools log in the step summary"
+            exit 1
+          fi
