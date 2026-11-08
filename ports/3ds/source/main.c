@@ -453,8 +453,8 @@ static void draw_title_bg(void)
 static void render_title_bottom(void)
 {
 	card_rect(0, 0, 320, 240, 0x1b1622, 1.0f);
-	card_rect(0, 0, 320, 34, 0xd0558e, 1.0f);
-	text_center(160.0f, 7.0f, 0.72f, 0xffffff, "游戏设置");
+	card_rect(0, 0, 320, 34, 0xb23f78, 1.0f);
+	text_center(160.0f, 5.0f, 0.78f, 0xffffff, "游戏设置");
 
 	float y = 46.0f;
 	for (int i = 0; i < ROW_COUNT; i++) {
