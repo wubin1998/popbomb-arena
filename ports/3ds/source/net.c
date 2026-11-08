@@ -513,8 +513,12 @@ void net_prepare_tick(int tick)
 	if (tick < 0 || tick > 0xffff)
 		return;
 	int idx = tick & (HIST - 1);
-	s_own_tick[idx] = (u16)tick;
-	s_own_bits[idx] = sample_input();
+	/* A stalled tick is retried every frame; keep the bits it first sent so
+	   both consoles apply the same input for that tick. */
+	if (s_own_tick[idx] != (u16)tick) {
+		s_own_tick[idx] = (u16)tick;
+		s_own_bits[idx] = sample_input();
+	}
 	send_input(tick);
 }
 
