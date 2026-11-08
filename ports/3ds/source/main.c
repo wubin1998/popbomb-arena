@@ -35,7 +35,7 @@ typedef struct {
 
 static Run g_run;
 
-static const char* const DIFF_NAMES[3] = { "EASY", "NORMAL", "HARD" };
+static const char* const DIFF_NAMES[3] = { "简单", "普通", "困难" };
 static const int DIFF_STAGES[3] = { 15, 20, 25 };
 
 /* ---------------- input ---------------- */
@@ -305,8 +305,8 @@ static void handle_global(u32 down)
 
 static void render_title_top(void)
 {
-	text_center(200.0f, 24.0f, 1.35f, 0xffffff, "POPBOMB ARENA");
-	text_center(200.0f, 66.0f, 0.55f, 0xb8c4d8, "3DS HOMEBREW EDITION");
+	text_center(200.0f, 24.0f, 1.35f, 0xffffff, "泡泡堂 大乱斗");
+	text_center(200.0f, 66.0f, 0.55f, 0xb8c4d8, "3DS 自制程序版");
 
 	float base = 200.0f - 2.0f * 74.0f;
 	for (int i = 0; i < 4; i++) {
@@ -314,7 +314,7 @@ static void render_title_top(void)
 		draw_icon(SET_HERO1 + i, 4, base + (float)i * 74.0f + 8.0f, 118.0f + bob,
 		          58.0f, 92.0f, 1.0f);
 	}
-	text_center(200.0f, 214.0f, 0.45f, 0x8f9bb0, "A: SELECT   DPAD: CHANGE   START: QUIT");
+	text_center(200.0f, 214.0f, 0.45f, 0x8f9bb0, "A 确认   十字键 更改   START 退出");
 	const char* audio_msg = audio_error_text();
 	if (audio_msg)
 		text_center(200.0f, 88.0f, 0.40f, 0xff7d7d, audio_msg);
@@ -332,22 +332,22 @@ static void card_rect(float x, float y, float w, float h, uint32_t rgb, float a)
 static void render_title_bottom(void)
 {
 	card_rect(0, 0, 320, 240, 0x151a26, 1.0f);
-	text_center(160.0f, 8.0f, 0.75f, 0xffffff, "GAME SETUP");
+	text_center(160.0f, 8.0f, 0.75f, 0xffffff, "游戏设置");
 
 	float y = 60.0f;
 	for (int i = 0; i < ROW_COUNT; i++) {
 		char line[96];
 		if (i == ROW_PLAYERS)
-			snprintf(line, sizeof(line), "PLAYERS      < %dP >", g_run.players);
+			snprintf(line, sizeof(line), "玩家人数  < %s >", g_run.players == 1 ? "单人" : "双人");
 		else if (i == ROW_DIFF)
-			snprintf(line, sizeof(line), "DIFFICULTY   < %s >", DIFF_NAMES[g_run.diff]);
+			snprintf(line, sizeof(line), "难度  < %s >", DIFF_NAMES[g_run.diff]);
 		else if (i == ROW_HERO)
-			snprintf(line, sizeof(line), "HERO         < %s%s%s >",
+			snprintf(line, sizeof(line), "角色  < %s%s%s >",
 			         HEROES[g_run.hero_pick[0] - 1].name,
 			         g_run.players == 2 ? " / " : "",
 			         g_run.players == 2 ? HEROES[g_run.hero_pick[1] - 1].name : "");
 		else
-			snprintf(line, sizeof(line), "            START GAME");
+			snprintf(line, sizeof(line), "开始游戏");
 
 		uint32_t color = i == g_selected ? 0xffd166 : 0xd7deea;
 		if (i == g_selected) {
@@ -358,8 +358,8 @@ static void render_title_bottom(void)
 		y += 38.0f;
 	}
 
-	text_center(160.0f, 198.0f, 0.48f, 0x93a0b5, "STAGES: EASY 15 / NORMAL 20 / HARD 25");
-	text_center(160.0f, 216.0f, 0.44f, 0x6f7c92, "1P DPAD+A   2P DPAD+A / CPAD+X   X: P2 HERO");
+	text_center(160.0f, 198.0f, 0.46f, 0x93a0b5, "关卡数  简单 15 / 普通 20 / 困难 25");
+	text_center(160.0f, 216.0f, 0.44f, 0x6f7c92, "1P 十字键+A  2P 摇杆+X  X 换角色");
 }
 
 static void render_hud(void)
@@ -369,7 +369,7 @@ static void render_hud(void)
 	char buf[64];
 	char tbuf[16];
 	fmt_time(tbuf, sizeof(tbuf), g_game.time);
-	snprintf(buf, sizeof(buf), "STAGE %d/%d", g_game.stage, g_game.total_stage);
+	snprintf(buf, sizeof(buf), "第 %d/%d 关", g_game.stage, g_game.total_stage);
 	font_draw(8.0f, 5.0f, 0.6f, 0xffffff, buf);
 	text_center(160.0f, 4.0f, 0.6f, 0xffd166, SCENES[g_game.map.scene_id].name);
 	float tw = font_width(0.75f, tbuf);
@@ -394,19 +394,19 @@ static void render_hud(void)
 
 		font_draw(x + 50.0f, y + 4.0f, 0.55f, info->color, info->name);
 		if (!h->alive)
-			font_draw(x + 50.0f, y + 22.0f, 0.45f, 0x8a94a6, "OUT");
+			font_draw(x + 50.0f, y + 22.0f, 0.45f, 0x8a94a6, "出局");
 
 		snprintf(buf, sizeof(buf), "%d", h->score);
 		font_draw(x + 50.0f, y + 34.0f, 0.55f, 0xffffff, buf);
 
-		snprintf(buf, sizeof(buf), "LIFE %d", h->lives > 0 ? h->lives : 0);
-		font_draw(x + 8.0f, y + 70.0f, 0.42f, 0xc7d0de, buf);
+		snprintf(buf, sizeof(buf), "生命 %d", h->lives > 0 ? h->lives : 0);
+		font_draw(x + 8.0f, y + 66.0f, 0.42f, 0xc7d0de, buf);
 
-		snprintf(buf, sizeof(buf), "BOMB %d/%d", h->bombs_out, h->total_bomb);
-		font_draw(x + 8.0f, y + 82.0f, 0.38f, 0xc7d0de, buf);
+		snprintf(buf, sizeof(buf), "炸弹 %d/%d", h->bombs_out, h->total_bomb);
+		font_draw(x + 8.0f, y + 80.0f, 0.40f, 0xc7d0de, buf);
 
-		snprintf(buf, sizeof(buf), "PWR %d", h->bomb_level);
-		font_draw(x + 86.0f, y + 70.0f, 0.38f, 0xc7d0de, buf);
+		snprintf(buf, sizeof(buf), "威力 %d", h->bomb_level);
+		font_draw(x + 92.0f, y + 66.0f, 0.40f, 0xc7d0de, buf);
 
 		if (h->push_bomb_able)
 			draw_icon(SET_TOOL, TOOL_GLOVE, x + 118.0f, y + 12.0f, 20.0f, 20.0f, 1.0f);
@@ -429,9 +429,9 @@ static void render_hud(void)
 
 	if (g_game.paused) {
 		card_rect(0, 0, 320, 240, 0x000000, 0.62f);
-		text_center(160.0f, 84.0f, 1.1f, 0xffffff, "PAUSED");
-		text_center(160.0f, 130.0f, 0.5f, 0xc7d0de, "START: RESUME");
-		text_center(160.0f, 150.0f, 0.5f, 0xc7d0de, "SELECT: QUIT TO TITLE");
+		text_center(160.0f, 84.0f, 1.1f, 0xffffff, "暂停");
+		text_center(160.0f, 130.0f, 0.5f, 0xc7d0de, "START 继续");
+		text_center(160.0f, 150.0f, 0.5f, 0xc7d0de, "SELECT 返回标题");
 	}
 }
 
@@ -441,44 +441,44 @@ static void render_result_bottom(void)
 
 	const char* title;
 	if (g_game.stage_clear)
-		title = g_game.final_stage ? "ALL STAGES CLEAR!" : "STAGE CLEAR!";
+		title = g_game.final_stage ? "全关卡通关！" : "过关！";
 	else
-		title = g_game.can_retry ? "TRY AGAIN" : "GAME OVER";
+		title = g_game.can_retry ? "再试一次" : "游戏结束";
 
 	text_center(160.0f, 14.0f, 0.95f, g_game.stage_clear ? 0xffd166 : 0xff7d7d, title);
 
 	char buf[64];
-	snprintf(buf, sizeof(buf), "STAGE %d/%d   %s", g_game.stage, g_game.total_stage,
+	snprintf(buf, sizeof(buf), "第 %d/%d 关  %s", g_game.stage, g_game.total_stage,
 	         SCENES[g_game.map.scene_id].name);
 	text_center(160.0f, 50.0f, 0.5f, 0xbcc6d6, buf);
 
 	char tbuf[16];
 	fmt_time(tbuf, sizeof(tbuf), g_game.time);
-	snprintf(buf, sizeof(buf), "TIME LEFT %s", tbuf);
+	snprintf(buf, sizeof(buf), "剩余时间 %s", tbuf);
 	text_center(160.0f, 68.0f, 0.5f, 0xbcc6d6, buf);
 
 	float y = 96.0f;
 	for (int i = 0; i < g_game.hero_count && i < 4; i++) {
 		Hero* h = &g_game.heroes[i];
 		const HeroInfo* info = &HEROES[h->hero_id - 1];
-		snprintf(buf, sizeof(buf), "%-6s %6d  BRK %d  KILL %d  TOOL %d",
+		snprintf(buf, sizeof(buf), "%s   %d分  砖%d  击倒%d  道具%d",
 		         info->name, h->score, h->brick_score, h->kill_score, h->tool_score);
 		font_draw(20.0f, y, 0.45f, h->human ? info->color : 0x9aa6ba, buf);
 		y += 20.0f;
 	}
 
 	if (g_run.players == 1) {
-		snprintf(buf, sizeof(buf), "TOTAL  %d", g_run.totals[0]);
+		snprintf(buf, sizeof(buf), "总分 %d", g_run.totals[0]);
 	} else {
-		snprintf(buf, sizeof(buf), "TOTAL  1P %d   2P %d", g_run.totals[0], g_run.totals[1]);
+		snprintf(buf, sizeof(buf), "总分 1P %d   2P %d", g_run.totals[0], g_run.totals[1]);
 	}
 	text_center(160.0f, 184.0f, 0.5f, 0xd7deea, buf);
 
 	const char* hint;
 	if (g_game.stage_clear)
-		hint = g_game.final_stage ? "A: TITLE" : "A: NEXT STAGE";
+		hint = g_game.final_stage ? "A 返回标题" : "A 下一关";
 	else
-		hint = g_game.can_retry ? "A: RETRY (lives left)" : "A: TITLE";
+		hint = g_game.can_retry ? "A 重试（还有生命）" : "A 返回标题";
 	text_center(160.0f, 214.0f, 0.55f, 0xffd166, hint);
 }
 
@@ -495,7 +495,7 @@ static void render(void)
 	} else {
 		game_render(&g_game, 240.0f / 390.0f);
 		if (g_game.paused)
-			text_center(200.0f, 110.0f, 1.0f, 0xffffff, "PAUSED");
+			text_center(200.0f, 110.0f, 1.0f, 0xffffff, "暂停");
 	}
 
 	C2D_TargetClear(s_bottom, C2D_Color32(0, 0, 0, 255));
@@ -577,8 +577,8 @@ int main(void)
 			C2D_SceneBegin(s_top);
 			C2D_TargetClear(s_bottom, C2D_Color32(80, 0, 0, 255));
 			C2D_SceneBegin(s_bottom);
-			text_center(160.0f, 100.0f, 0.5f, 0xffffff, "ASSET LOAD FAILED");
-			text_center(160.0f, 120.0f, 0.5f, 0xffffff, "PRESS START TO EXIT");
+			text_center(160.0f, 100.0f, 0.5f, 0xffffff, "素材加载失败");
+			text_center(160.0f, 120.0f, 0.5f, 0xffffff, "按 START 退出");
 			C3D_FrameEnd(0);
 		} else {
 			render();

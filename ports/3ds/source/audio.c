@@ -223,9 +223,9 @@ const char* audio_error_text(void)
 {
 	/* ndspInit needs the DSP firmware (/3ds/dspfirm.cdc or Luma's hb:ndsp). */
 	if (!s_ready)
-		return "AUDIO OFF: NO DSP FIRMWARE";
+		return "音频关闭：未找到DSP固件";
 	if (s_error)
-		return "AUDIO OFF: SOUND LOAD FAILED";
+		return "音频关闭：音效加载失败";
 	return NULL;
 }
 

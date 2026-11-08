@@ -5,26 +5,26 @@
 const int DIR_VEC[4][2] = { { -1, 0 }, { 0, -1 }, { 1, 0 }, { 0, 1 } };
 
 const HeroInfo HEROES[4] = {
-	{ 1, "RED", 0xff5b9d, 0xc92f70, 16 },
-	{ 2, "YELLOW", 0xffcf3d, 0xd79a12, 17 },
-	{ 3, "BLUE", 0x56b7ff, 0x2277cc, 18 },
-	{ 4, "GREEN", 0x6ee08a, 0x2f9a53, 19 },
+	{ 1, "红", 0xff5b9d, 0xc92f70, 16 },
+	{ 2, "黄", 0xffcf3d, 0xd79a12, 17 },
+	{ 3, "蓝", 0x56b7ff, 0x2277cc, 18 },
+	{ 4, "绿", 0x6ee08a, 0x2f9a53, 19 },
 };
 
 /* ids 1..12; frame ids match DefineSprite_294 */
 const ToolDef TOOLS[12] = {
-	{ 1, "LIFE", TOOL_LIFE, "Life +1" },
-	{ 2, "GLOVE", TOOL_GLOVE, "Push bombs" },
-	{ 3, "BOMB CANDY", TOOL_BOMB, "Bombs +1" },
-	{ 4, "SHIELD", TOOL_SHIELD, "Block one hit" },
-	{ 5, "POWER", TOOL_POWER, "Blast +1" },
-	{ 6, "FLY SHOES", TOOL_SPEED, "Move faster" },
-	{ 7, "ROCKET", TOOL_ROCKET, "Flies straight" },
-	{ 8, "MINE", TOOL_MINE, "Explodes on touch" },
-	{ 9, "GRENADE", TOOL_GRENADE, "Toss two cells" },
-	{ 10, "GAS BOMB", TOOL_GAS, "Slows enemies" },
-	{ 11, "ICE ARROW", TOOL_ICE, "Freezes three cells" },
-	{ 12, "FIRE ARROW", TOOL_FIRE, "Piercing flame" },
+	{ 1, "生命", TOOL_LIFE, "生命+1" },
+	{ 2, "拳套", TOOL_GLOVE, "推动炸弹" },
+	{ 3, "炸弹糖", TOOL_BOMB, "炸弹+1" },
+	{ 4, "盾牌", TOOL_SHIELD, "抵挡一次" },
+	{ 5, "威力药", TOOL_POWER, "范围+1" },
+	{ 6, "飞鞋", TOOL_SPEED, "移动加速" },
+	{ 7, "火箭", TOOL_ROCKET, "直线飞行" },
+	{ 8, "地雷", TOOL_MINE, "踩中即爆" },
+	{ 9, "手榴弹", TOOL_GRENADE, "投掷两格" },
+	{ 10, "汽弹", TOOL_GAS, "减速敌人" },
+	{ 11, "冰箭", TOOL_ICE, "冻结三格" },
+	{ 12, "火焰箭", TOOL_FIRE, "贯穿火焰" },
 };
 
 const ToolDef* tool_by_id(int id)
