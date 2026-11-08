@@ -2,6 +2,8 @@
 
 #include <math.h>
 
+#include "audio.h"
+
 static int hero_cx(Hero* h)
 {
 	return (int)lroundf(h->px / GRID);
@@ -178,6 +180,7 @@ static void hero_pickup(Hero* h)
 		return;
 	if (map_take_tool(&g->map, h->x, h->y) == 0)
 		return;
+	audio_play("pickup");
 	hero_apply_tool(h, def, tool_id);
 }
 
@@ -393,6 +396,7 @@ bool hero_hurt(Hero* h, Hero* owner)
 	if (h->shield) {
 		h->shield = false;
 		h->var_shield = 60;
+		audio_play("sfx319");
 		game_burst(h->game, h->px + GRID / 2.0f, h->py + GRID / 2.0f,
 		           1, 14, 0.8f, 2.4f, 22.0f, 1.5f, 4.0f, 0.08f);
 		return true;
@@ -400,6 +404,7 @@ bool hero_hurt(Hero* h, Hero* owner)
 	if (owner && owner != h)
 		hero_add_score(owner, SCORE_KILL, 1000);
 	h->lives--;
+	audio_play("stageLose");
 	fx_anim(&h->game->fx, SET_DIE_SMOKE, h->x, h->y, 36, 1.1f, 0.9f);
 	game_burst(h->game, h->px + GRID / 2.0f, h->py + GRID / 2.0f,
 	           2, 18, 1.0f, 3.2f, 28.0f, 1.5f, 4.0f, 0.08f);

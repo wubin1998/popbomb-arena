@@ -3,6 +3,8 @@
 #include <math.h>
 #include <string.h>
 
+#include "audio.h"
+
 /* ---------------- bombs ---------------- */
 
 Bomb* fx_plant(FX* fx, Hero* hero)
@@ -27,6 +29,7 @@ Bomb* fx_plant(FX* fx, Hero* hero)
 		Cell* c = map_cell(&fx->game->map, b->x, b->y);
 		if (c)
 			c->bomb = (int16_t)i;
+		audio_play("place");
 		return b;
 	}
 	return NULL;
@@ -45,6 +48,7 @@ static void bomb_explode(Bomb* b)
 	Hero* owner = game_hero(g, b->owner);
 	if (owner && owner->bombs_out > 0)
 		owner->bombs_out--;
+	audio_play("explode");
 	fx_boom_at(&g->fx, b->x, b->y, owner, b->power);
 }
 
@@ -74,6 +78,7 @@ bool bomb_push(Bomb* b, int dx, int dy)
 	b->slide_t = 0;
 	b->slide_ticks = 6;
 	b->sliding = true;
+	audio_play("push");
 	return true;
 }
 
@@ -222,6 +227,7 @@ void fx_rocket(FX* fx, Hero* hero)
 	w->dx = v[0];
 	w->dy = v[1];
 	w->t = 0;
+	audio_play("rocket");
 }
 
 void fx_mine(FX* fx, Hero* hero)
@@ -236,6 +242,7 @@ void fx_mine(FX* fx, Hero* hero)
 	w->px = (float)(w->x * GRID);
 	w->py = (float)(w->y * GRID);
 	w->offset = 0;
+	audio_play("mine");
 }
 
 bool fx_grenade(FX* fx, Hero* hero)
@@ -258,6 +265,7 @@ bool fx_grenade(FX* fx, Hero* hero)
 	w->x = hero->x;
 	w->y = hero->y;
 	w->t = 0;
+	audio_play("grenade");
 	return true;
 }
 
@@ -272,6 +280,7 @@ void fx_gas(FX* fx, Hero* hero)
 	w->y = hero->y;
 	w->px = (float)(w->x * GRID);
 	w->py = (float)(w->y * GRID);
+	audio_play("sfx315");
 }
 
 bool fx_ice_arrow(FX* fx, Hero* hero)
@@ -283,6 +292,7 @@ bool fx_ice_arrow(FX* fx, Hero* hero)
 	Weapon* w = weapon_alloc(fx, WPN_ICE);
 	if (!w)
 		return false;
+	audio_play("sfx325");
 	w->owner = hero->slot;
 	w->hero_id = hero->hero_id;
 	w->x = hero->x;
@@ -302,6 +312,7 @@ bool fx_fire_arrow(FX* fx, Hero* hero)
 	Weapon* w = weapon_alloc(fx, WPN_FIRE);
 	if (!w)
 		return false;
+	audio_play_vol("explode", 0.4f);
 	w->owner = hero->slot;
 	w->hero_id = hero->hero_id;
 	w->x = hero->x;
@@ -395,6 +406,7 @@ static void weapon_step(Weapon* w)
 			if (h->x == w->x && h->y == w->y) {
 				h->slow_time = 600;
 				h->slow_v_level = 20;
+				audio_play_vol("sfx319", 0.4f);
 				w->active = false;
 				return;
 			}

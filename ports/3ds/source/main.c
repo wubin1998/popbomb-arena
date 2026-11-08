@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "assets.h"
+#include "audio.h"
 #include "game.h"
 
 #define STEP_MS (1000.0 / 35.0)
@@ -128,6 +129,10 @@ static void start_stage(void)
 	g_game.special_pair[0] = g_run.pair[0];
 	g_game.special_pair[1] = g_run.pair[1];
 	g_screen = SCREEN_GAME;
+
+	char bgm[8];
+	snprintf(bgm, sizeof(bgm), "bgm%d", 1 + (g_run.stage - 1) % 4);
+	audio_music(bgm);
 }
 
 static void start_run(void)
@@ -173,6 +178,12 @@ static void handle_result(void)
 		}
 	}
 	g_game.can_retry = !game_over && !g_game.stage_clear;
+
+	audio_stop_music();
+	if (g_game.stage_clear)
+		audio_play_vol("stageWin", 0.7f);
+	else
+		audio_play_vol("stageLose", 0.6f);
 	g_screen = SCREEN_RESULT;
 }
 
@@ -251,10 +262,17 @@ static void handle_global(u32 down)
 	if (g_screen == SCREEN_GAME) {
 		if (down & KEY_START) {
 			g_game.paused = !g_game.paused;
+			if (g_game.paused)
+				audio_pause_music();
+			else
+				audio_resume_music();
 			g_selected = ROW_START;
 		}
-		if (down & KEY_SELECT)
+		if (down & KEY_SELECT) {
+			audio_stop_music();
+			audio_music("menu");
 			g_screen = SCREEN_TITLE;
+		}
 		return;
 	}
 
@@ -262,6 +280,7 @@ static void handle_global(u32 down)
 		if (down & (KEY_A | KEY_START)) {
 			if (g_game.stage_clear) {
 				if (g_game.final_stage) {
+					audio_music("menu");
 					g_screen = SCREEN_TITLE;
 				} else {
 					g_run.stage++;
@@ -271,11 +290,14 @@ static void handle_global(u32 down)
 			} else if (g_game.can_retry) {
 				start_stage();
 			} else {
+				audio_music("menu");
 				g_screen = SCREEN_TITLE;
 			}
 		}
-		if (down & KEY_SELECT)
+		if (down & KEY_SELECT) {
+			audio_music("menu");
 			g_screen = SCREEN_TITLE;
+		}
 	}
 }
 
@@ -488,6 +510,7 @@ static void render(void)
 int main(void)
 {
 	romfsInit();
+	audio_init();
 	gfxInitDefault();
 	C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
 	C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
@@ -506,6 +529,8 @@ int main(void)
 	g_run.hero_pick[1] = 2;
 	g_run.total_stage = DIFF_STAGES[g_run.diff];
 	g_selected = ROW_START;
+
+	audio_music("menu");
 
 	u64 last = osGetTime();
 	double acc = 0.0;
@@ -555,6 +580,7 @@ int main(void)
 		}
 	}
 
+	audio_exit();
 	assets_free_all();
 	font_shutdown();
 	C2D_Fini();
