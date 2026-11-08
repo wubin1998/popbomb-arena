@@ -54,6 +54,7 @@ def pow2_at_least(v):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--font", default=os.path.join(ROOT, "tools", "fonts", "NotoSansSC-Regular.ttf"))
+    ap.add_argument("--subset-out", help="write a font subset covering the collected characters")
     ap.add_argument("--list", action="store_true", help="print the collected characters and exit")
     args = ap.parse_args()
 
@@ -64,6 +65,22 @@ def main():
 
     if not os.path.exists(args.font):
         sys.exit("font not found: %s" % args.font)
+
+    if args.subset_out:
+        from fontTools import subset
+
+        opts = subset.Options()
+        opts.layout_features = ["*"]
+        opts.name_IDs = ["*"]
+        opts.notdef_outline = True
+        opts.recalc_bounds = True
+        full = subset.load_font(args.font, opts)
+        sub = subset.Subsetter(opts)
+        sub.populate(unicodes=cps)
+        sub.subset(full)
+        subset.save_font(full, args.subset_out, opts)
+        print("wrote %s (%d glyphs)" % (args.subset_out, len(cps)))
+
     font = ImageFont.truetype(args.font, FONT_PX)
 
     rows = math.ceil(len(cps) / COLS)

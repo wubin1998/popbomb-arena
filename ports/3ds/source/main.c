@@ -7,11 +7,13 @@
 #include "assets.h"
 #include "audio.h"
 #include "game.h"
+#include "net.h"
 
 #define STEP_MS (1000.0 / 35.0)
 
-enum { SCREEN_TITLE = 0, SCREEN_GAME, SCREEN_RESULT };
+enum { SCREEN_TITLE = 0, SCREEN_GAME, SCREEN_RESULT, SCREEN_LOBBY };
 enum { ROW_PLAYERS = 0, ROW_DIFF, ROW_HERO, ROW_START, ROW_COUNT };
+enum { MODE_SOLO = 0, MODE_LOCAL, MODE_HOST, MODE_JOIN };
 
 static C3D_RenderTarget* s_top;
 static C3D_RenderTarget* s_bottom;
@@ -22,6 +24,7 @@ static int g_selected = ROW_START;
 static bool g_quit;
 
 typedef struct {
+	int mode;
 	int players;
 	int diff;
 	int hero_pick[2];
@@ -34,7 +37,11 @@ typedef struct {
 } Run;
 
 static Run g_run;
+static const char* g_notice;
+static bool g_stage_seen;
+static uint8_t g_stage_seq;
 
+static const char* const MODE_NAMES[4] = { "单人", "双人", "联机主机", "联机加入" };
 static const char* const DIFF_NAMES[3] = { "简单", "普通", "困难" };
 static const int DIFF_STAGES[3] = { 15, 20, 25 };
 
@@ -42,6 +49,10 @@ static const int DIFF_STAGES[3] = { 15, 20, 25 };
 
 bool input_dir_held(int layout, int d)
 {
+	if (layout == 1 || layout == 2) {
+		if (net_role() != NET_OFF)
+			return (net_input_bits(layout) >> d) & 1;
+	}
 	if (layout == 2) {
 		circlePosition p;
 		hidCircleRead(&p);
@@ -58,6 +69,10 @@ bool input_dir_held(int layout, int d)
 
 bool input_fire_held(int layout)
 {
+	if (layout == 1 || layout == 2) {
+		if (net_role() != NET_OFF)
+			return (net_input_bits(layout) >> 4) & 1;
+	}
 	if (layout == 2)
 		return (hidKeysHeld() & KEY_X) != 0;
 	return (hidKeysHeld() & KEY_A) != 0;
@@ -123,7 +138,32 @@ static void next_special_pair(void)
 
 static void start_stage(void)
 {
+	static uint8_t stage_seq;
+
+	uint32_t seed = (uint32_t)(osGetTime() ^ ((uint64_t)(g_run.stage + 1) * 2654435761u));
+	rng_seed(seed);
 	int scene = rng_int(0, 4);
+
+	if (net_role() == NET_HOST) {
+		NetStage st;
+		memset(&st, 0, sizeof(st));
+		st.seed = rng_next();
+		st.seq = ++stage_seq;
+		st.scene = (uint8_t)scene;
+		st.stage = (uint8_t)g_run.stage;
+		st.total_stage = (uint8_t)g_run.total_stage;
+		st.diff = (uint8_t)g_run.diff;
+		st.players = (uint8_t)g_run.players;
+		st.hero[0] = (uint8_t)g_run.hero_pick[0];
+		st.hero[1] = (uint8_t)g_run.hero_pick[1];
+		st.lives[0] = (uint8_t)g_run.lives[0];
+		st.lives[1] = (uint8_t)g_run.lives[1];
+		st.pair[0] = (uint8_t)g_run.pair[0];
+		st.pair[1] = (uint8_t)g_run.pair[1];
+		net_send_stage(&st);
+		rng_seed(st.seed);
+	}
+
 	game_init(&g_game, g_run.players, g_run.diff, g_run.stage, g_run.total_stage,
 	          scene, g_run.hero_pick, g_run.lives);
 	g_game.special_pair[0] = g_run.pair[0];
@@ -137,12 +177,14 @@ static void start_stage(void)
 
 static void start_run(void)
 {
+	int mode = g_run.mode;
 	int players = g_run.players;
 	int diff = g_run.diff;
 	int hero0 = g_run.hero_pick[0];
 	int hero1 = g_run.hero_pick[1];
 
 	memset(&g_run, 0, sizeof(g_run));
+	g_run.mode = mode;
 	g_run.players = players;
 	g_run.diff = diff;
 	g_run.hero_pick[0] = hero0;
@@ -187,6 +229,73 @@ static void handle_result(void)
 	g_screen = SCREEN_RESULT;
 }
 
+static void leave_net(void)
+{
+	if (net_role() != NET_OFF) {
+		net_send_bye();
+		net_close();
+	}
+}
+
+static void start_net_lobby(void)
+{
+	int role = g_run.mode == MODE_HOST ? NET_HOST : NET_CLIENT;
+	if (role == NET_CLIENT)
+		net_set_hero(g_run.hero_pick[0]);
+	if (!net_open(role)) {
+		g_notice = net_error();
+		return;
+	}
+	g_notice = NULL;
+	g_stage_seen = false;
+	g_screen = SCREEN_LOBBY;
+}
+
+static void apply_net_stage(const NetStage* st)
+{
+	int heroes[2] = { st->hero[0], st->hero[1] };
+	int lives[2] = { st->lives[0], st->lives[1] };
+
+	g_run.players = st->players;
+	g_run.diff = st->diff;
+	g_run.stage = st->stage;
+	g_run.total_stage = st->total_stage;
+	g_run.hero_pick[0] = st->hero[1];
+	g_run.hero_pick[1] = st->hero[0];
+	g_run.lives[0] = lives[0];
+	g_run.lives[1] = lives[1];
+	g_run.pair[0] = st->pair[0];
+	g_run.pair[1] = st->pair[1];
+	if (st->stage == 1)
+		g_run.totals[0] = g_run.totals[1] = 0;
+
+	net_reset_ticks();
+	rng_seed(st->seed);
+	game_init(&g_game, st->players, st->diff, st->stage, st->total_stage,
+	          st->scene, heroes, lives);
+	g_game.special_pair[0] = st->pair[0];
+	g_game.special_pair[1] = st->pair[1];
+
+	char bgm[8];
+	snprintf(bgm, sizeof(bgm), "bgm%d", 1 + (st->stage - 1) % 4);
+	audio_music(bgm);
+	g_screen = SCREEN_GAME;
+}
+
+static void start_net_match(void)
+{
+	int peer = net_peer_hero();
+	if (peer < 1 || peer > 4 || peer == g_run.hero_pick[0]) {
+		peer = 0;
+		for (int id = 1; id <= 4 && !peer; id++)
+			if (id != g_run.hero_pick[0])
+				peer = id;
+	}
+	g_run.players = 2;
+	g_run.hero_pick[1] = peer;
+	start_run();
+}
+
 /* ---------------- menus and global keys ---------------- */
 
 static void cycle_hero(int player, int delta)
@@ -201,9 +310,11 @@ static void cycle_hero(int player, int delta)
 	g_run.hero_pick[player] = id;
 }
 
-static void toggle_players(void)
+static void cycle_mode(int dir)
 {
-	g_run.players = g_run.players == 1 ? 2 : 1;
+	int m = (g_run.mode + 4 + (dir > 0 ? 1 : 3)) % 4;
+	g_run.mode = m;
+	g_run.players = m == MODE_SOLO ? 1 : 2;
 	if (g_run.players == 2 && g_run.hero_pick[1] == g_run.hero_pick[0])
 		cycle_hero(1, 1);
 }
@@ -223,7 +334,7 @@ static void handle_title(u32 down)
 
 	if (dir != 0) {
 		if (g_selected == ROW_PLAYERS) {
-			toggle_players();
+			cycle_mode(dir);
 		} else if (g_selected == ROW_DIFF) {
 			g_run.diff = (g_run.diff + 3 + dir) % 3;
 		} else if (g_selected == ROW_HERO) {
@@ -233,9 +344,12 @@ static void handle_title(u32 down)
 
 	if (down & KEY_A) {
 		if (g_selected == ROW_START) {
-			start_run();
+			if (g_run.mode >= MODE_HOST)
+				start_net_lobby();
+			else
+				start_run();
 		} else if (g_selected == ROW_PLAYERS) {
-			toggle_players();
+			cycle_mode(1);
 		} else if (g_selected == ROW_DIFF) {
 			g_run.diff = (g_run.diff + 1) % 3;
 		} else if (g_selected == ROW_HERO) {
@@ -243,7 +357,7 @@ static void handle_title(u32 down)
 		}
 	}
 	if (down & KEY_X) {
-		if (g_run.players == 2)
+		if (g_run.mode == MODE_LOCAL)
 			cycle_hero(1, 1);
 	}
 }
@@ -259,8 +373,20 @@ static void handle_global(u32 down)
 		return;
 	}
 
+	if (g_screen == SCREEN_LOBBY) {
+		if (down & (KEY_B | KEY_SELECT)) {
+			leave_net();
+			audio_music("menu");
+			g_screen = SCREEN_TITLE;
+		} else if (down & KEY_A) {
+			if (g_run.mode == MODE_HOST && net_peer_joined())
+				start_net_match();
+		}
+		return;
+	}
+
 	if (g_screen == SCREEN_GAME) {
-		if (down & KEY_START) {
+		if (down & KEY_START && net_role() == NET_OFF) {
 			g_game.paused = !g_game.paused;
 			if (g_game.paused)
 				audio_pause_music();
@@ -269,6 +395,7 @@ static void handle_global(u32 down)
 			g_selected = ROW_START;
 		}
 		if (down & KEY_SELECT) {
+			leave_net();
 			audio_stop_music();
 			audio_music("menu");
 			g_screen = SCREEN_TITLE;
@@ -277,9 +404,11 @@ static void handle_global(u32 down)
 	}
 
 	if (g_screen == SCREEN_RESULT) {
-		if (down & (KEY_A | KEY_START)) {
+		bool client = net_role() == NET_CLIENT;
+		if ((down & (KEY_A | KEY_START)) && !client) {
 			if (g_game.stage_clear) {
 				if (g_game.final_stage) {
+					leave_net();
 					audio_music("menu");
 					g_screen = SCREEN_TITLE;
 				} else {
@@ -290,11 +419,13 @@ static void handle_global(u32 down)
 			} else if (g_game.can_retry) {
 				start_stage();
 			} else {
+				leave_net();
 				audio_music("menu");
 				g_screen = SCREEN_TITLE;
 			}
 		}
 		if (down & KEY_SELECT) {
+			leave_net();
 			audio_music("menu");
 			g_screen = SCREEN_TITLE;
 		}
@@ -318,6 +449,8 @@ static void render_title_top(void)
 	const char* audio_msg = audio_error_text();
 	if (audio_msg)
 		text_center(200.0f, 88.0f, 0.40f, 0xff7d7d, audio_msg);
+	if (g_notice)
+		text_center(200.0f, 98.0f, 0.40f, 0xff7d7d, g_notice);
 }
 
 /* ---------------- bottom screen ---------------- */
@@ -338,14 +471,15 @@ static void render_title_bottom(void)
 	for (int i = 0; i < ROW_COUNT; i++) {
 		char line[96];
 		if (i == ROW_PLAYERS)
-			snprintf(line, sizeof(line), "玩家人数  < %s >", g_run.players == 1 ? "单人" : "双人");
+			snprintf(line, sizeof(line), "模式  < %s >", MODE_NAMES[g_run.mode]);
 		else if (i == ROW_DIFF)
 			snprintf(line, sizeof(line), "难度  < %s >", DIFF_NAMES[g_run.diff]);
 		else if (i == ROW_HERO)
 			snprintf(line, sizeof(line), "角色  < %s%s%s >",
 			         HEROES[g_run.hero_pick[0] - 1].name,
-			         g_run.players == 2 ? " / " : "",
-			         g_run.players == 2 ? HEROES[g_run.hero_pick[1] - 1].name : "");
+			         g_run.players == 2 && g_run.mode != MODE_JOIN ? " / " : "",
+			         g_run.players == 2 && g_run.mode != MODE_JOIN
+			             ? HEROES[g_run.hero_pick[1] - 1].name : "");
 		else
 			snprintf(line, sizeof(line), "开始游戏");
 
@@ -475,11 +609,60 @@ static void render_result_bottom(void)
 	text_center(160.0f, 184.0f, 0.5f, 0xd7deea, buf);
 
 	const char* hint;
-	if (g_game.stage_clear)
+	if (net_role() == NET_CLIENT)
+		hint = "等待主机选择…";
+	else if (g_game.stage_clear)
 		hint = g_game.final_stage ? "A 返回标题" : "A 下一关";
 	else
 		hint = g_game.can_retry ? "A 重试（还有生命）" : "A 返回标题";
 	text_center(160.0f, 214.0f, 0.55f, 0xffd166, hint);
+}
+
+static void render_lobby_top(void)
+{
+	text_center(200.0f, 24.0f, 1.35f, 0xffffff, "泡泡堂 大乱斗");
+	text_center(200.0f, 84.0f, 0.85f, 0xffd166, "联机对战");
+	text_center(200.0f, 126.0f, 0.62f, 0xffffff, net_status());
+
+	if (g_run.mode == MODE_HOST) {
+		char buf[64];
+		if (strcmp(net_local_ip(), "0.0.0.0") == 0)
+			snprintf(buf, sizeof(buf), "未连接 WiFi");
+		else
+			snprintf(buf, sizeof(buf), "主机 IP %s", net_local_ip());
+		text_center(200.0f, 160.0f, 0.48f, 0xb8c4d8, buf);
+	}
+
+	const char* hint = "B 返回";
+	if (g_run.mode == MODE_HOST && net_peer_joined())
+		hint = "A 开始对战    B 返回";
+	text_center(200.0f, 208.0f, 0.45f, 0x8f9bb0, hint);
+}
+
+static void render_lobby_bottom(void)
+{
+	card_rect(0, 0, 320, 240, 0x151a26, 1.0f);
+	text_center(160.0f, 8.0f, 0.75f, 0xffffff, "联机对战");
+
+	if (g_run.mode == MODE_HOST) {
+		bool joined = net_peer_joined();
+		text_center(160.0f, 66.0f, 0.62f, joined ? 0xffd166 : 0xd7deea,
+		            joined ? "玩家已连接" : "等待玩家加入…");
+		text_center(160.0f, 104.0f, 0.46f, 0x93a0b5, "两台 3DS 连接同一 WiFi");
+		text_center(160.0f, 126.0f, 0.46f, 0x93a0b5, "或 ZeroTier 虚拟局域网");
+		char buf[64];
+		snprintf(buf, sizeof(buf), "端口 %d", NET_PORT);
+		text_center(160.0f, 152.0f, 0.46f, 0x6f7c92, buf);
+		text_center(160.0f, 208.0f, 0.46f, 0x93a0b5,
+		            joined ? "按 A 开始，2 人 + 2 AI" : "让另一台选择「联机加入」");
+	} else {
+		bool joined = net_peer_joined();
+		text_center(160.0f, 66.0f, 0.62f, joined ? 0xffd166 : 0xd7deea,
+		            joined ? "已连接，等待主机开始" : "正在搜索主机…");
+		text_center(160.0f, 104.0f, 0.46f, 0x93a0b5, "请确认主机已开启房间");
+		text_center(160.0f, 126.0f, 0.46f, 0x93a0b5, "且两台在同一局域网");
+		text_center(160.0f, 208.0f, 0.46f, 0x93a0b5, "B 取消");
+	}
 }
 
 /* ---------------- render ---------------- */
@@ -492,6 +675,8 @@ static void render(void)
 	C2D_SceneBegin(s_top);
 	if (g_screen == SCREEN_TITLE) {
 		render_title_top();
+	} else if (g_screen == SCREEN_LOBBY) {
+		render_lobby_top();
 	} else {
 		game_render(&g_game, 240.0f / 390.0f);
 		if (g_game.paused)
@@ -502,6 +687,8 @@ static void render(void)
 	C2D_SceneBegin(s_bottom);
 	if (g_screen == SCREEN_TITLE)
 		render_title_bottom();
+	else if (g_screen == SCREEN_LOBBY)
+		render_lobby_bottom();
 	else if (g_screen == SCREEN_GAME)
 		render_hud();
 	else
@@ -539,10 +726,32 @@ int main(void)
 
 	u64 last = osGetTime();
 	double acc = 0.0;
+	char notice_buf[64];
 
 	while (aptMainLoop()) {
 		hidScanInput();
 		u32 down = hidKeysDown();
+
+		net_poll();
+
+		if (net_role() != NET_OFF && net_take_disconnect()) {
+			snprintf(notice_buf, sizeof(notice_buf), "%s", net_status());
+			leave_net();
+			g_notice = notice_buf;
+			audio_music("menu");
+			g_screen = SCREEN_TITLE;
+		}
+
+		if (net_role() == NET_CLIENT
+		    && (g_screen == SCREEN_LOBBY || g_screen == SCREEN_RESULT)) {
+			NetStage st;
+			if (net_recv_stage(&st) && (!g_stage_seen || st.seq != g_stage_seq)) {
+				g_stage_seen = true;
+				g_stage_seq = st.seq;
+				g_notice = NULL;
+				apply_net_stage(&st);
+			}
+		}
 
 		if (!assets_ok) {
 			if (down & KEY_START)
@@ -564,8 +773,20 @@ int main(void)
 		while (acc >= STEP_MS && steps < 5) {
 			acc -= STEP_MS;
 			steps++;
-			if (g_screen == SCREEN_GAME && !g_game.paused)
-				game_step(&g_game);
+			if (g_screen != SCREEN_GAME || g_game.paused)
+				continue;
+			if (net_role() != NET_OFF) {
+				int tick = g_game.tick + 1;
+				net_prepare_tick(tick);
+				int need = tick - NET_INPUT_DELAY;
+				if (need > 0 && !net_tick_ready(need)) {
+					if (acc < 5 * STEP_MS)
+						acc += STEP_MS;
+					break;
+				}
+				net_set_sim_tick(tick);
+			}
+			game_step(&g_game);
 		}
 
 		if (g_screen == SCREEN_GAME && g_game.state == STATE_OVER)
@@ -585,6 +806,7 @@ int main(void)
 		}
 	}
 
+	leave_net();
 	audio_exit();
 	assets_free_all();
 	font_shutdown();

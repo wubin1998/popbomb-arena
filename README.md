@@ -47,10 +47,13 @@ php -S 127.0.0.1:8000
 
 ## 3DS 自制程序版
 
-原生 `libctru` + `citro2d` 移植（非 SDL）：上屏 400 × 240 显示游戏区，下屏 320 × 240 显示比分、生命、炸弹数与特殊武器。
+原生 `libctru` + `citro2d` 移植（非 SDL）：上屏 400 × 240 显示游戏区，下屏 320 × 240 显示比分、生命、炸弹数与特殊武器。界面与字体为简体中文（内置 Noto Sans SC 子集点阵图集）。
 
-- **下载**：Releases 的 `3ds-latest` 标签，文件 `popbomb-arena.3dsx`
-- **安装**：复制到 SD 卡 `/3ds/popbomb-arena.3dsx`，从 Homebrew Launcher 启动
+- **下载**：Releases 的 `3ds-latest` 标签
+  - `popbomb-arena.cia` — 安装包，带独立图标与横幅，出现在主菜单
+  - `popbomb-arena.3dsx` — Homebrew Launcher 版
+- **安装 CIA**：用 FBI 选 `Remote Install` 或把文件拷到 SD 卡后选 `Install CIA`；卸载走 系统设置 → 数据管理
+- **安装 3DSX**：复制到 SD 卡 `/3ds/popbomb-arena.3dsx`，从 Homebrew Launcher 启动
 - **前提**：已安装 CFW 的 3DS；无需额外运行库
 - **声音**：`ndsp` 需要 DSP 固件转储 `dspfirm.cdc`，放在 SD 卡 `/3ds/dspfirm.cdc`（Luma3DS 会通过 `hb:ndsp` 读取它）。缺少该文件或使用模拟器时游戏照常运行但无声，标题上屏会显示 `AUDIO OFF: NO DSP FIRMWARE`
 
@@ -58,13 +61,23 @@ php -S 127.0.0.1:8000
 |---|---|
 | 移动（单人 / P1） | 十字键 |
 | 放炸弹 / 使用武器（单人 / P1） | `A` |
-| 移动（2P） | 摇杆 |
-| 放炸弹 / 使用武器（2P） | `X` |
-| 暂停 / 继续 | `START` |
+| 移动（2P / 联机搭档） | 摇杆 |
+| 放炸弹 / 使用武器（2P / 联机搭档） | `X` |
+| 暂停 / 继续（仅单机） | `START` |
 | 返回标题 | `SELECT` |
 | 退出程序（标题界面） | `START` |
 
-标题界面用十字键上下选择项目、左右修改，`A` 确认；双人模式下 `X` 切换 2P 角色。
+标题界面用十字键上下选择项目、左右修改，`A` 确认。模式一行为 `单人` / `双人` / `联机主机` / `联机加入`；双人模式下 `X` 切换 2P 角色。
+
+### 3DS 联机对战（局域网）
+
+两台 3DS 连接同一 WiFi 即可对战：主机选「联机主机」→ `A` 建房，另一台选「联机加入」→ 自动搜索并连接，主机按 `A` 开始。对局为 **2 真人 + 2 AI**。
+
+- 协议：UDP 端口 **4242**，主机自动应答局域网广播；跨网段/异地时可用 [ZeroTier](https://www.zerotier.com/) 组虚拟局域网（免费），让两台机器在同一虚拟网段即可
+- 同步方式：确定性锁步（lockstep）——双方运行同一套模拟，只交换输入位图并延迟 2 tick 生效，因此不需要传输回合并可保持完全一致
+- 连接断开（对方退出或 6 秒无响应）会自动回到标题并提示
+- 端口被占用、未连 WiFi 时标题上屏会给出提示；主机大厅会显示本机 IP
+- 模拟器（Azahar/Citra）通常无法与真机通过 `soc` 联机，请以两台真机测试
 
 从源码构建需要 [devkitPro](https://devkitpro.org/)（devkitARM、libctru、citro2d、tex3ds）：
 
@@ -72,7 +85,7 @@ php -S 127.0.0.1:8000
 make -C ports/3ds
 ```
 
-GitHub Actions（`.github/workflows/3ds.yml`）会在每次推送后自动构建并发布到 `3ds-latest`。音频由 `src/assets/audio/*.mp3` 转为 22.05 kHz 单声道 PCM16 WAV，放在 `ports/3ds/romfs/audio/`，通过 ndsp 播放。
+GitHub Actions（`.github/workflows/3ds.yml`）会在每次推送后自动构建 `.3dsx`，再用 makerom/bannertool 打包 `.cia`，发布到 `3ds-latest`。音频由 `src/assets/audio/*.mp3` 转为 22.05 kHz 单声道 PCM16 WAV，放在 `ports/3ds/romfs/audio/`，通过 ndsp 播放；中文字体子集由 `tools/build_zh_font.py` 从 Noto Sans SC 生成。
 
 ---
 
@@ -192,7 +205,10 @@ popbomb-arena/
 
 - 新增 3DS 原生移植：citro2d 渲染、下屏 HUD、双人/单人、关卡与结算流程。
 - 3DS 音频：ndsp 播放循环 BGM 与全部音效。
-- GitHub Actions 自动构建 `.3dsx` 并发布到 `3ds-latest`。
+- 3DS 界面改为简体中文，内置 Noto Sans SC 子集点阵字体（`tools/build_zh_font.py` 生成）。
+- 新增 `.cia` 安装包：makerom + bannertool 打包，带图标、横幅与中文名；修复 makerom `UniqueId` 越界导致的打包失败。
+- 新增 3DS 局域网联机（2 真人 + 2 AI）：UDP 4242，确定性锁步同步，支持广播自动发现与 ZeroTier 异地组网。
+- GitHub Actions 自动构建 `.3dsx` / `.cia` 并发布到 `3ds-latest`。
 
 ### 2026-11-06
 
@@ -216,10 +232,12 @@ popbomb-arena/
 - [ ] GitHub Actions 自动跑冒烟测试
 - [ ] 手柄支持
 - [x] 3DS 自制程序移植（原生 citro2d + ndsp 音频）
+- [x] 3DS 简体中文界面与 `.cia` 安装包
+- [x] 3DS 局域网联机对战（2 真人 + 2 AI，锁步同步）
 - [ ] NDS 烧录卡移植（评估中）
 - [ ] Switch 自制程序移植（需要破解，暂缓）
 
-联机对战不在当前范围内；本项目是单机/本地双人对战。
+网页版为单机/本地双人对战；联机对战目前仅在 3DS 版提供。
 
 ---
 
