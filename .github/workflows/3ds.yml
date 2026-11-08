@@ -61,6 +61,8 @@ jobs:
           path: ports/3ds
 
       - name: Install packaging tools
+        id: tools
+        continue-on-error: true
         run: |
           curl -fsSL --retry 10 --retry-delay 5 --retry-all-errors -o /tmp/makerom.zip \
             https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18.4/makerom-v0.18.4-ubuntu_x86_64.zip
@@ -74,6 +76,7 @@ jobs:
           makerom -v 2>&1 | head -2 || true
 
       - name: Prepare banner audio
+        if: steps.tools.outcome == 'success'
         working-directory: ports/3ds
         run: |
           python3 - <<'EOF'
@@ -89,6 +92,7 @@ jobs:
           EOF
 
       - name: Build SMDH icon
+        if: steps.tools.outcome == 'success'
         working-directory: ports/3ds
         run: |
           bannertool makesmdh -s "泡泡堂 大乱斗" -scs "泡泡堂 大乱斗" \
@@ -96,11 +100,13 @@ jobs:
             -i cia/icon.png -o popbomb-arena.icn
 
       - name: Build banner
+        if: steps.tools.outcome == 'success'
         working-directory: ports/3ds
         run: |
           bannertool makebanner -i cia/banner.png -a /tmp/banner.wav -o popbomb-arena.bnr
 
       - name: Build CIA
+        if: steps.tools.outcome == 'success'
         working-directory: ports/3ds
         run: |
           makerom -f cia -o popbomb-arena.cia -elf popbomb-arena.elf -rsf app.rsf \
@@ -114,6 +120,15 @@ jobs:
             ports/3ds/popbomb-arena.3dsx
             ports/3ds/popbomb-arena.cia
           if-no-files-found: error
+
+      - name: Collect release files
+        id: assets
+        run: |
+          files="ports/3ds/popbomb-arena.3dsx"
+          if [ -f ports/3ds/popbomb-arena.cia ]; then
+            files="$files"$'\n'"ports/3ds/popbomb-arena.cia"
+          fi
+          printf 'files<<EOF\n%s\nEOF\n' "$files" >> "$GITHUB_OUTPUT"
 
       - name: Publish latest 3DS build
         if: github.event_name != 'pull_request'
@@ -132,6 +147,4 @@ jobs:
 
             Press START on the title screen to quit.
           prerelease: true
-          files: |
-            ports/3ds/popbomb-arena.3dsx
-            ports/3ds/popbomb-arena.cia
+          files: ${{ steps.assets.outputs.files }}
