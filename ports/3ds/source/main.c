@@ -504,17 +504,26 @@ static void dim_poster(void)
 	card_rect(0.0f, 0.0f, 400.0f, 240.0f, 0x120e18, 0.45f);
 }
 
+/* Item legend, laid out like the original help page: 12 tools in two
+   columns with icon + short description. */
 static void render_info_top(void)
 {
-	dim_poster();
-	card_rect(26.0f, 24.0f, 348.0f, 192.0f, 0x241a2b, 0.96f);
-	card_rect(26.0f, 24.0f, 348.0f, 34.0f, 0xb23f78, 1.0f);
-	text_center(200.0f, 29.0f, 0.8f, 0xffffff, "玩法");
-	text_center(200.0f, 76.0f, 0.56f, 0xe8eef8, "炸开砖 找出道具");
-	text_center(200.0f, 106.0f, 0.56f, 0xe8eef8, "用炸弹 击败对手");
-	text_center(200.0f, 136.0f, 0.56f, 0xe8eef8, "时间 03:00 结束");
-	text_center(200.0f, 166.0f, 0.56f, 0xe8eef8, "被炸 生命 -1");
-	text_center(200.0f, 198.0f, 0.42f, 0x93a0b5, "A / B 返回");
+	draw_icon(SET_TITLE, 1, 0.0f, 0.0f, 400.0f, 240.0f, 0.30f);
+	card_rect(0.0f, 0.0f, 400.0f, 240.0f, 0xfff2f7, 0.90f);
+	card_rect(0.0f, 0.0f, 400.0f, 32.0f, 0xd94f86, 1.0f);
+	text_center(200.0f, 5.0f, 0.82f, 0xffffff, "道具");
+
+	for (int i = 0; i < 12; i++) {
+		int col = i / 6;
+		int row = i % 6;
+		float x = 14.0f + col * 192.0f;
+		float y = 42.0f + row * 29.0f;
+		if (row % 2 == 0)
+			card_rect(x, y - 2.0f, 186.0f, 28.0f, 0xffffff, 0.70f);
+		draw_icon(SET_TOOL, i + 1, x + 4.0f, y, 24.0f, 24.0f, 1.0f);
+		font_draw(x + 34.0f, y + 4.0f, 0.50f, 0x5a2a44, TOOLS[i].desc);
+	}
+	text_center(200.0f, 218.0f, 0.40f, 0x9c7186, "A / B 返回");
 }
 
 static void render_title_top(void)
@@ -576,25 +585,48 @@ static const char* page_title(void)
 	case PAGE_MODE: return "选择模式";
 	case PAGE_DIFF: return "选择难度";
 	case PAGE_HERO: return "选择角色";
-	case PAGE_INFO: return "玩法";
+	case PAGE_INFO: return "道具";
 	default: return "游戏";
 	}
 }
 
 static void render_title_bottom(void)
 {
-	card_rect(0, 0, 320, 240, 0x1b1622, 1.0f);
-	card_rect(0, 0, 320, 34, 0xb23f78, 1.0f);
-	text_center(160.0f, 5.0f, 0.78f, 0xffffff, page_title());
+	/* Pink card that matches the poster instead of a black panel; dark text on
+	   the cream face keeps the menu readable. */
+	card_rect(0, 0, 320, 240, 0xf3aec7, 1.0f);
+	card_rect(5, 5, 310, 230, 0xfff3f8, 1.0f);
+	card_rect(5, 5, 310, 34, 0xd94f86, 1.0f);
+	card_rect(5, 39, 310, 2, 0xe9c2d2, 1.0f);
+	text_center(160.0f, 7.0f, 0.8f, 0xffffff, page_title());
+
+	const uint32_t c_active = 0xc4376f;
+	const uint32_t c_normal = 0x5a2a44;
+	const uint32_t c_muted = 0x94677c;
 
 	char line[96];
-	float y = 52.0f;
+	float y = 56.0f;
+
+	bool act = g_page == PAGE_MODE;
+	card_rect(24.0f, y - 8.0f, 272.0f, 30.0f, act ? 0xffd9e8 : 0xffffff, 1.0f);
+	if (act)
+		card_rect(24.0f, y - 8.0f, 4.0f, 30.0f, c_active, 1.0f);
 	snprintf(line, sizeof(line), "模式  < %s >", MODE_NAMES[g_run.mode]);
-	text_center(160.0f, y, 0.62f, g_page == PAGE_MODE ? 0xffd166 : 0xd7deea, line);
+	text_center(160.0f, y, 0.62f, act ? c_active : c_normal, line);
 	y += 34.0f;
+
+	act = g_page == PAGE_DIFF;
+	card_rect(24.0f, y - 8.0f, 272.0f, 30.0f, act ? 0xffd9e8 : 0xffffff, 1.0f);
+	if (act)
+		card_rect(24.0f, y - 8.0f, 4.0f, 30.0f, c_active, 1.0f);
 	snprintf(line, sizeof(line), "难度  < %s >", DIFF_NAMES[g_run.diff]);
-	text_center(160.0f, y, 0.62f, g_page == PAGE_DIFF ? 0xffd166 : 0xd7deea, line);
+	text_center(160.0f, y, 0.62f, act ? c_active : c_normal, line);
 	y += 34.0f;
+
+	act = g_page == PAGE_HERO;
+	card_rect(24.0f, y - 8.0f, 272.0f, 30.0f, act ? 0xffd9e8 : 0xffffff, 1.0f);
+	if (act)
+		card_rect(24.0f, y - 8.0f, 4.0f, 30.0f, c_active, 1.0f);
 	if (g_run.mode == MODE_LOCAL)
 		snprintf(line, sizeof(line), "角色  < %s >  < %s >",
 		         HEROES[g_run.hero_pick[0] - 1].name,
@@ -602,31 +634,34 @@ static void render_title_bottom(void)
 	else
 		snprintf(line, sizeof(line), "角色  < %s >",
 		         HEROES[g_run.hero_pick[0] - 1].name);
-	text_center(160.0f, y, 0.62f, g_page == PAGE_HERO ? 0xffd166 : 0xd7deea, line);
+	text_center(160.0f, y, 0.62f, act ? c_active : c_normal, line);
 
 	y += 34.0f;
 	snprintf(line, sizeof(line), "关卡数  %d", DIFF_STAGES[g_run.diff]);
-	text_center(160.0f, y, 0.55f, 0x93a0b5, line);
+	text_center(160.0f, y, 0.55f, c_muted, line);
 
 	const char* hint1 = "十字键 选择   A 确认";
 	const char* hint2 = "START 退出";
 	if (g_page == PAGE_HERO) {
 		hint1 = g_run.mode == MODE_LOCAL ? "A 确认   X 换 2P 角色" : "A 确认";
 		hint2 = "B 返回";
+	} else if (g_page == PAGE_INFO) {
+		hint1 = "A / B 返回";
+		hint2 = "";
 	} else if (g_page != PAGE_HOME) {
 		hint1 = "十字键 选择   A 确认";
 		hint2 = "B 返回";
 	}
-	text_center(160.0f, 180.0f, 0.44f, 0xe8eef8, hint1);
-	text_center(160.0f, 198.0f, 0.44f, 0x93a0b5, hint2);
+	text_center(160.0f, 186.0f, 0.44f, 0x7a4b62, hint1);
+	text_center(160.0f, 204.0f, 0.44f, 0x9c7186, hint2);
 
 	const char* audio_msg = audio_error_text();
 	if (audio_msg)
-		text_center(160.0f, 216.0f, 0.40f, 0xff7d7d, audio_msg);
+		text_center(160.0f, 222.0f, 0.40f, 0xc0392b, audio_msg);
 	else if (g_notice)
-		text_center(160.0f, 216.0f, 0.40f, 0xff7d7d, g_notice);
+		text_center(160.0f, 222.0f, 0.40f, 0xc0392b, g_notice);
 	else
-		text_center(160.0f, 216.0f, 0.40f, 0x6f7c92,
+		text_center(160.0f, 222.0f, 0.40f, 0x8f6276,
 		            "1P 十字键+A   2P 摇杆+X");
 }
 
