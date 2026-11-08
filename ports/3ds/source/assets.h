@@ -3,29 +3,7 @@
 #include <stdbool.h>
 #include <citro2d.h>
 
-enum {
-	SET_BG = 0,
-	SET_BRICK,
-	SET_TOOL,
-	SET_BOMB,
-	SET_EXP,
-	SET_BRICK_EXP,
-	SET_HERO_EXP,
-	SET_DIE_SMOKE,
-	SET_ROCKET,
-	SET_ROCKET_SMOKE,
-	SET_MINE,
-	SET_GRENADE,
-	SET_GAS,
-	SET_FIRE_EFFECT,
-	SET_FREEZE_EFFECT,
-	SET_POINTER,
-	SET_HERO1,
-	SET_HERO2,
-	SET_HERO3,
-	SET_HERO4,
-	SET_COUNT
-};
+#include "game.h"
 
 typedef struct {
 	C2D_SpriteSheet sheet;
