@@ -44,16 +44,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -x
+          [ -f /tmp/build.log ] || echo "build.log was not created" > /tmp/build.log
           head -c 60000 /tmp/build.log > build.log
           B64=$(base64 -w0 build.log)
           API=https://api.github.com/repos/${{ github.repository }}
-          SHA=$(git rev-parse HEAD)
-          curl -s -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$API/git/refs/heads/ci-diag"
+          curl -s -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$API/git/refs/heads/ci-diag" || true
           curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" "$API/git/refs" \
-            -d "{\"ref\":\"refs/heads/ci-diag\",\"sha\":\"$SHA\"}"
+            -d "{\"ref\":\"refs/heads/ci-diag\",\"sha\":\"$GITHUB_SHA\"}" || true
           curl -s -X PUT -H "Authorization: Bearer $GH_TOKEN" "$API/contents/build.log" \
-            -d "{\"message\":\"ci build log\",\"content\":\"$B64\",\"branch\":\"ci-diag\"}" > /dev/null
+            -d "{\"message\":\"ci build log\",\"content\":\"$B64\",\"branch\":\"ci-diag\"}" > /dev/null || true
 
       - name: Show artifacts
         run: ls -lh ports/3ds/popbomb-arena.3dsx ports/3ds/popbomb-arena.elf
