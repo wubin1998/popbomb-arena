@@ -742,7 +742,7 @@ static void render_settings_bottom(void)
 	text_center(160.0f, 178.0f, 0.5f, 0x9c7186, "A 确认   B 返回");
 
 	const char* audio_msg = audio_status_text();
-	bool playing = audio_msg && strcmp(audio_msg, "音乐播放中") == 0;
+	bool playing = audio_msg && strncmp(audio_msg, "音乐播放中", 15) == 0;
 	text_center(160.0f, 210.0f, 0.46f, playing ? 0x2e9e63 : 0xc0392b, audio_msg);
 }
 

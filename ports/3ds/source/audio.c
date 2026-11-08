@@ -95,6 +95,7 @@ static Result s_init_result;
 static int s_csnd_music = -1;
 static s16* s_csnd_mem;
 static char s_err_buf[48];
+static char s_status_buf[32];
 
 static u16 rd16(const unsigned char* p)
 {
@@ -564,13 +565,18 @@ const char* audio_status_text(void)
 		return "音乐播放失败";
 	if (s_music_idx < 0)
 		return "音乐未播放";
+
+	bool playing;
 	if (s_csnd) {
 		u8 active = 0;
-		if (R_SUCCEEDED(csndIsPlaying((u32)s_csnd_music, &active)) && active)
-			return "音乐播放中";
-		return "音乐等待中";
+		playing = R_SUCCEEDED(csndIsPlaying((u32)s_csnd_music, &active)) &&
+		          active;
+	} else {
+		playing = ndspChnIsPlaying(MUSIC_CH);
 	}
-	return ndspChnIsPlaying(MUSIC_CH) ? "音乐播放中" : "音乐等待中";
+	snprintf(s_status_buf, sizeof s_status_buf, "%s %s",
+	         playing ? "音乐播放中" : "音乐等待中", s_csnd ? "CSND" : "NDSP");
+	return s_status_buf;
 }
 
 bool audio_ok(void)
