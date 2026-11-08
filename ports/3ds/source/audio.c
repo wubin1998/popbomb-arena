@@ -219,6 +219,16 @@ bool audio_ok(void)
 	return s_ready && !s_error;
 }
 
+const char* audio_error_text(void)
+{
+	/* ndspInit needs the DSP firmware (/3ds/dspfirm.cdc or Luma's hb:ndsp). */
+	if (!s_ready)
+		return "AUDIO OFF: NO DSP FIRMWARE";
+	if (s_error)
+		return "AUDIO OFF: SOUND LOAD FAILED";
+	return NULL;
+}
+
 static void music_start(int idx)
 {
 	Clip* c = &s_clips[idx];

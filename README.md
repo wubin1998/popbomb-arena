@@ -52,6 +52,7 @@ php -S 127.0.0.1:8000
 - **下载**：Releases 的 `3ds-latest` 标签，文件 `popbomb-arena.3dsx`
 - **安装**：复制到 SD 卡 `/3ds/popbomb-arena.3dsx`，从 Homebrew Launcher 启动
 - **前提**：已安装 CFW 的 3DS；无需额外运行库
+- **声音**：`ndsp` 需要 DSP 固件。Luma3DS 会通过 `hb:ndsp` 自动提供；若音频不可用，把 dump 出的固件放到 SD 卡 `/3ds/dspfirm.cdc` 即可。缺失时游戏照常运行，标题下屏会显示 `AUDIO OFF: NO DSP FIRMWARE`
 
 | 操作 | 按键 |
 |---|---|

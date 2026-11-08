@@ -355,10 +355,11 @@ static void render_title_bottom(void)
 		y += 38.0f;
 	}
 
-	text_center(160.0f, 198.0f, 0.48f, 0x93a0b5, "STAGES: EASY 15 / NORMAL 20 / HARD 25");
-	text_center(160.0f, 216.0f, 0.44f, 0x6f7c92, "1P DPAD+A   2P DPAD+A / CPAD+X   X: P2 HERO");
-	if (!audio_ok())
-		text_center(160.0f, 226.0f, 0.34f, 0xff7d7d, "AUDIO UNAVAILABLE");
+	text_center(160.0f, 194.0f, 0.48f, 0x93a0b5, "STAGES: EASY 15 / NORMAL 20 / HARD 25");
+	text_center(160.0f, 210.0f, 0.44f, 0x6f7c92, "1P DPAD+A   2P DPAD+A / CPAD+X   X: P2 HERO");
+	const char* audio_msg = audio_error_text();
+	if (audio_msg)
+		text_center(160.0f, 226.0f, 0.30f, 0xff7d7d, audio_msg);
 }
 
 static void render_hud(void)

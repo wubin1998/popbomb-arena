@@ -9,6 +9,9 @@ void audio_init(void);
 void audio_exit(void);
 bool audio_ok(void);
 
+/* NULL when audio is fine; otherwise a short line naming the failure. */
+const char* audio_error_text(void);
+
 void audio_play(const char* name);
 void audio_play_vol(const char* name, float volume);
 
