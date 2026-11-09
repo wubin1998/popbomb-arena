@@ -204,23 +204,39 @@ void map_init(GameMap* m, int scene_id)
 		c->frame = 0;
 	}
 
-	/* Never box a spawn in: if all four neighbours rolled bricks, open one. */
+	/* Every spawn needs a two-cell lane to retreat down: with only one walkable
+	   neighbour the first bomb goes off while the hero is still inside its
+	   blast, and the spawn shield (60 ticks) expires on the same tick as the
+	   fuse (60 ticks). Stones never land on a spawn's axis neighbours, but the
+	   cell beyond may be stone or the centre landmark, so pick a direction
+	   whose two cells are both free of unbreakables and clear their bricks. */
 	for (int i = 0; i < 4; i++) {
-		bool open = false;
-		for (int k = 0; k < 8; k += 2) {
-			Cell* n = map_cell(m, m->spawn_x[i] + AROUND[k][0],
-			                   m->spawn_y[i] + AROUND[k][1]);
-			if (n && !n->brick && !n->stone)
-				open = true;
+		int start = rng_int(0, 3);
+		int pick = -1;
+		for (int t = 0; t < 4 && pick < 0; t++) {
+			int k = (start + t) % 4;
+			int dx = AROUND[2 * k][0], dy = AROUND[2 * k][1];
+			int x1 = m->spawn_x[i] + dx, y1 = m->spawn_y[i] + dy;
+			if (!blocked_at(m, x1, y1) && !blocked_at(m, x1 + dx, y1 + dy))
+				pick = k;
 		}
-		if (open)
+		for (int t = 0; t < 4 && pick < 0; t++) {
+			int k = (start + t) % 4;
+			int x1 = m->spawn_x[i] + AROUND[2 * k][0];
+			int y1 = m->spawn_y[i] + AROUND[2 * k][1];
+			if (!blocked_at(m, x1, y1))
+				pick = k;
+		}
+		if (pick < 0)
 			continue;
-		int k = 2 * rng_int(0, 3);
-		Cell* n = map_cell(m, m->spawn_x[i] + AROUND[k][0],
-		                   m->spawn_y[i] + AROUND[k][1]);
-		if (n) {
-			n->brick = 0;
-			n->frame = 0;
+		int dx = AROUND[2 * pick][0], dy = AROUND[2 * pick][1];
+		int x1 = m->spawn_x[i] + dx, y1 = m->spawn_y[i] + dy;
+		for (int step = 1; step <= 2; step++) {
+			Cell* c = map_cell(m, m->spawn_x[i] + dx * step, m->spawn_y[i] + dy * step);
+			if (!c || c->stone)
+				break;
+			c->brick = 0;
+			c->frame = 0;
 		}
 	}
 }

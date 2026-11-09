@@ -68,19 +68,37 @@
         c.frame = 0;
       }
 
-      // Never box a spawn in: if all four neighbours rolled bricks, open one.
-      const sides = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+      // Every spawn needs a two-cell lane to retreat down: with only one
+      // walkable neighbour the first bomb goes off while the hero is still
+      // inside its blast (spawn shield and fuse are both 60 ticks). Stones
+      // never land on a spawn's axis neighbours, but the cell beyond may be
+      // stone or the centre landmark, so pick a direction whose two cells are
+      // both free of unbreakables and clear their bricks.
+      const axes = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+      const unbreakable = (x, y) => {
+        const c = this.cell(x, y);
+        return !c || c.stone || this.isBigCell(x, y);
+      };
       for (const s of this.spawns) {
-        const open = sides.some(([dx, dy]) => {
-          const n = this.cell(s.x + dx, s.y + dy);
-          return n && !n.brick && !n.stone;
-        });
-        if (open) continue;
-        const [dx, dy] = sides[BI.randInt(0, 3)];
-        const n = this.cell(s.x + dx, s.y + dy);
-        if (n) {
-          n.brick = false;
-          n.frame = 0;
+        const start = BI.randInt(0, 3);
+        let pick = -1;
+        for (let t = 0; t < 4 && pick < 0; t++) {
+          const k = (start + t) % 4;
+          const [dx, dy] = axes[k];
+          if (!unbreakable(s.x + dx, s.y + dy) && !unbreakable(s.x + dx * 2, s.y + dy * 2))
+            pick = k;
+        }
+        for (let t = 0; t < 4 && pick < 0; t++) {
+          const k = (start + t) % 4;
+          if (!unbreakable(s.x + axes[k][0], s.y + axes[k][1])) pick = k;
+        }
+        if (pick < 0) continue;
+        const [dx, dy] = axes[pick];
+        for (let step = 1; step <= 2; step++) {
+          const c = this.cell(s.x + dx * step, s.y + dy * step);
+          if (!c || c.stone) break;
+          c.brick = false;
+          c.frame = 0;
         }
       }
     }
