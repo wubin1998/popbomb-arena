@@ -67,11 +67,12 @@ jobs:
               "https://www.libsdl.org/release/SDL2-${SDL_VERSION}.tar.gz" -o sdl2.tar.gz
             tar xzf sdl2.tar.gz
             # KMSDRM + GLES only: the handheld has no X11 or Wayland compositor.
-            # An explicit prefix keeps headers and the .so in one predictable
-            # place; the default /usr/local install has proven not to land.
+            # Install under the workspace: the checkout directory is the only
+            # place that survives between steps of a container job.
             cmake -S "SDL2-${SDL_VERSION}" -B sdl2-build \
               -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=/tmp/sdlroot -DCMAKE_INSTALL_LIBDIR=lib \
+              -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/_deps/sdlroot" \
+              -DCMAKE_INSTALL_LIBDIR=lib \
               -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF \
               -DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_KMSDRM=ON \
               -DSDL_OPENGL=OFF -DSDL_OPENGLES=ON \
@@ -81,11 +82,10 @@ jobs:
               -DSDL_LIBUDEV=ON -DSDL_HIDAPI=ON
             cmake --build sdl2-build -j"$(nproc)"
             cmake --install sdl2-build
-            ls -l /tmp/sdlroot/include/SDL2/SDL.h
-            /tmp/sdlroot/bin/sdl2-config --cflags
-            /tmp/sdlroot/bin/sdl2-config --version
-            echo /tmp/sdlroot/lib > /etc/ld.so.conf.d/sdlroot.conf
-            ldconfig
+            sdl_root="$GITHUB_WORKSPACE/_deps/sdlroot"
+            ls -l "$sdl_root/include/SDL2/SDL.h"
+            "$sdl_root/bin/sdl2-config" --cflags
+            "$sdl_root/bin/sdl2-config" --version
           ) 2>&1 | tee /tmp/sdl2.log; then
             tail -n 15 /tmp/sdl2.log | sed 's/^/::error::/'
             exit 1
@@ -94,7 +94,7 @@ jobs:
       - name: Build the game
         run: |
           set -o pipefail
-          sdl_root=/tmp/sdlroot
+          sdl_root="$GITHUB_WORKSPACE/_deps/sdlroot"
           if ! (
             set -eux
             ls -l "$sdl_root/include/SDL2/SDL.h"
@@ -107,12 +107,35 @@ jobs:
             exit 1
           fi
 
+      # CI logs need auth; this artifact is readable without it when a step fails.
+      - name: Collect diagnostics
+        if: always()
+        run: |
+          mkdir -p build
+          {
+            echo "## env"; echo "workspace=$GITHUB_WORKSPACE runner_temp=$RUNNER_TEMP"
+            echo "PATH=$PATH"
+            echo "## pwd"; pwd; ls -la
+            echo "## deps"; ls -la _deps 2>&1; ls -la _deps/sdlroot 2>&1
+            echo "## sdls"; find / -name 'SDL.h' -not -path '*/sdl2-build/*' 2>/dev/null | head -20
+            echo "## tools"; command -v cc cmake sdl2-config; cc --version 2>&1 | head -2
+            echo "## tmp"; ls -la /tmp
+          } > build/diag.txt 2>&1 || true
+          cat build/diag.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r36s-diag
+          path: build/diag.txt
+          if-no-files-found: ignore
+
       - name: Smoke test (headless)
         run: |
           set -o pipefail
           if ! (
             set -eux
-            LD_LIBRARY_PATH=/tmp/sdlroot/lib \
+            LD_LIBRARY_PATH="$GITHUB_WORKSPACE/_deps/sdlroot/lib" \
             POPBOMB_SELFTEST=300 POPBOMB_NOAUDIO=1 SDL_VIDEODRIVER=dummy \
               POPBOMB_DATA="$PWD/ports/3ds" ./ports/sdl/popbomb-sdl
             file ports/sdl/popbomb-sdl
@@ -134,7 +157,7 @@ jobs:
                ports/r36s/popbomb/gameinfo.xml ports/r36s/popbomb/screenshot.png \
                ports/r36s/popbomb/popbomb.gptk "$out/popbomb/"
             install -m 755 ports/sdl/popbomb-sdl "$out/popbomb/popbomb-sdl.aarch64"
-            cp -L /tmp/sdlroot/lib/libSDL2-2.0.so.0 "$out/popbomb/libs.aarch64/"
+            cp -L "$GITHUB_WORKSPACE/_deps/sdlroot/lib/libSDL2-2.0.so.0" "$out/popbomb/libs.aarch64/"
             cp ports/3ds/gfx/*.png ports/3ds/gfx/*.t3s "$out/popbomb/data/gfx/"
             cp ports/3ds/romfs/audio/*.wav "$out/popbomb/data/romfs/audio/"
             ldd "$out/popbomb/popbomb-sdl.aarch64"
