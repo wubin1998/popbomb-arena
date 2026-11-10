@@ -67,8 +67,11 @@ jobs:
               "https://www.libsdl.org/release/SDL2-${SDL_VERSION}.tar.gz" -o sdl2.tar.gz
             tar xzf sdl2.tar.gz
             # KMSDRM + GLES only: the handheld has no X11 or Wayland compositor.
+            # An explicit prefix keeps headers and the .so in one predictable
+            # place; the default /usr/local install has proven not to land.
             cmake -S "SDL2-${SDL_VERSION}" -B sdl2-build \
               -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=/tmp/sdlroot -DCMAKE_INSTALL_LIBDIR=lib \
               -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF \
               -DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_KMSDRM=ON \
               -DSDL_OPENGL=OFF -DSDL_OPENGLES=ON \
@@ -78,8 +81,10 @@ jobs:
               -DSDL_LIBUDEV=ON -DSDL_HIDAPI=ON
             cmake --build sdl2-build -j"$(nproc)"
             cmake --install sdl2-build
-            sdl2-config --version
-            echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf
+            ls -l /tmp/sdlroot/include/SDL2/SDL.h
+            /tmp/sdlroot/bin/sdl2-config --cflags
+            /tmp/sdlroot/bin/sdl2-config --version
+            echo /tmp/sdlroot/lib > /etc/ld.so.conf.d/sdlroot.conf
             ldconfig
           ) 2>&1 | tee /tmp/sdl2.log; then
             tail -n 15 /tmp/sdl2.log | sed 's/^/::error::/'
@@ -89,7 +94,7 @@ jobs:
       - name: Build the game
         run: |
           set -o pipefail
-          sdl_root=/usr/local
+          sdl_root=/tmp/sdlroot
           if ! (
             set -eux
             ls -l "$sdl_root/include/SDL2/SDL.h"
@@ -107,6 +112,7 @@ jobs:
           set -o pipefail
           if ! (
             set -eux
+            LD_LIBRARY_PATH=/tmp/sdlroot/lib \
             POPBOMB_SELFTEST=300 POPBOMB_NOAUDIO=1 SDL_VIDEODRIVER=dummy \
               POPBOMB_DATA="$PWD/ports/3ds" ./ports/sdl/popbomb-sdl
             file ports/sdl/popbomb-sdl
@@ -128,7 +134,7 @@ jobs:
                ports/r36s/popbomb/gameinfo.xml ports/r36s/popbomb/screenshot.png \
                ports/r36s/popbomb/popbomb.gptk "$out/popbomb/"
             install -m 755 ports/sdl/popbomb-sdl "$out/popbomb/popbomb-sdl.aarch64"
-            cp -L /usr/local/lib/libSDL2-2.0.so.0 "$out/popbomb/libs.aarch64/"
+            cp -L /tmp/sdlroot/lib/libSDL2-2.0.so.0 "$out/popbomb/libs.aarch64/"
             cp ports/3ds/gfx/*.png ports/3ds/gfx/*.t3s "$out/popbomb/data/gfx/"
             cp ports/3ds/romfs/audio/*.wav "$out/popbomb/data/romfs/audio/"
             ldd "$out/popbomb/popbomb-sdl.aarch64"
