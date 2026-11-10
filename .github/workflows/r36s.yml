@@ -89,7 +89,15 @@ jobs:
       - name: Build the game
         run: |
           set -o pipefail
-          if ! make -C ports/sdl -j"$(nproc)" 2>&1 | tee /tmp/game.log; then
+          if ! (
+            set -eux
+            sdl2-config --cflags
+            sdl2-config --libs
+            ls -l /usr/local/include/SDL2/SDL.h
+            make -C ports/sdl -j"$(nproc)" \
+              SDL_CFLAGS="$(sdl2-config --cflags)" \
+              SDL_LIBS="$(sdl2-config --libs)"
+          ) 2>&1 | tee /tmp/game.log; then
             tail -n 15 /tmp/game.log | sed 's/^/::error::/'
             exit 1
           fi
