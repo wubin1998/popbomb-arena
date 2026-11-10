@@ -1,7 +1,7 @@
 name: Build R36S port
 
 # The port reuses ports/3ds/source, so changes there (or to the shared gfx and
-# audio data) rebuild it too. Debian bullseye keeps the binary's glibc floor at
+# audio data) rebuild it too. Ubuntu focal keeps the binary's glibc floor at
 # 2.31, which EmuELEC/ArkOS images on RK3326 satisfy.
 on:
   push:
@@ -33,67 +33,100 @@ jobs:
   build:
     # Native aarch64 runner, so SDL2 and the game build without a cross sysroot.
     runs-on: ubuntu-24.04-arm
-    container: debian:bullseye
+    container: ubuntu:20.04
 
     steps:
       - uses: actions/checkout@v4
 
+      # CI logs need a login to read; failures are re-emitted as annotations,
+      # which the public API serves without one.
       - name: Install build dependencies
         run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            build-essential cmake curl ca-certificates file zip \
-            libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
-            libasound2-dev libudev-dev
+          if ! (
+            set -eux
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              build-essential cmake curl ca-certificates file zip \
+              libdrm-dev libgbm-dev libegl1-mesa-dev libgles2-mesa-dev \
+              libasound2-dev libudev-dev
+          ) 2>&1 | tee /tmp/deps.log; then
+            tail -n 15 /tmp/deps.log | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - name: Build SDL2
         working-directory: /tmp
         run: |
-          curl -fsSL --retry 4 --retry-delay 3 --retry-all-errors \
-            "https://www.libsdl.org/release/SDL2-${SDL_VERSION}.tar.gz" -o sdl2.tar.gz
-          tar xzf sdl2.tar.gz
-          # KMSDRM + GLES only: the handheld has no X11 or Wayland compositor.
-          cmake -S "SDL2-${SDL_VERSION}" -B sdl2-build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF \
-            -DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_KMSDRM=ON \
-            -DSDL_OPENGL=OFF -DSDL_OPENGLES=ON \
-            -DSDL_ALSA=ON -DSDL_PULSEAUDIO=OFF -DSDL_PIPEWIRE=OFF \
-            -DSDL_JACK=OFF -DSDL_SNDIO=OFF \
-            -DSDL_DBUS=OFF -DSDL_IBUS=OFF \
-            -DSDL_LIBUDEV=ON -DSDL_HIDAPI=ON
-          cmake --build sdl2-build -j"$(nproc)"
-          cmake --install sdl2-build
-          sdl2-config --version
-          echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf
-          ldconfig
+          set -o pipefail
+          if ! (
+            set -eux
+            curl -fsSL --retry 4 --retry-delay 3 --retry-all-errors \
+              "https://www.libsdl.org/release/SDL2-${SDL_VERSION}.tar.gz" -o sdl2.tar.gz
+            tar xzf sdl2.tar.gz
+            # KMSDRM + GLES only: the handheld has no X11 or Wayland compositor.
+            cmake -S "SDL2-${SDL_VERSION}" -B sdl2-build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF \
+              -DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_KMSDRM=ON \
+              -DSDL_OPENGL=OFF -DSDL_OPENGLES=ON \
+              -DSDL_ALSA=ON -DSDL_PULSEAUDIO=OFF -DSDL_PIPEWIRE=OFF \
+              -DSDL_JACK=OFF -DSDL_SNDIO=OFF \
+              -DSDL_DBUS=OFF -DSDL_IBUS=OFF \
+              -DSDL_LIBUDEV=ON -DSDL_HIDAPI=ON
+            cmake --build sdl2-build -j"$(nproc)"
+            cmake --install sdl2-build
+            sdl2-config --version
+            echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf
+            ldconfig
+          ) 2>&1 | tee /tmp/sdl2.log; then
+            tail -n 15 /tmp/sdl2.log | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - name: Build the game
-        run: make -C ports/sdl -j"$(nproc)"
+        run: |
+          set -o pipefail
+          if ! make -C ports/sdl -j"$(nproc)" 2>&1 | tee /tmp/game.log; then
+            tail -n 15 /tmp/game.log | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - name: Smoke test (headless)
         run: |
-          POPBOMB_SELFTEST=300 POPBOMB_NOAUDIO=1 SDL_VIDEODRIVER=dummy \
-            POPBOMB_DATA="$PWD/ports/3ds" ./ports/sdl/popbomb-sdl
-          file ports/sdl/popbomb-sdl
+          set -o pipefail
+          if ! (
+            set -eux
+            POPBOMB_SELFTEST=300 POPBOMB_NOAUDIO=1 SDL_VIDEODRIVER=dummy \
+              POPBOMB_DATA="$PWD/ports/3ds" ./ports/sdl/popbomb-sdl
+            file ports/sdl/popbomb-sdl
+          ) 2>&1 | tee /tmp/smoke.log; then
+            tail -n 15 /tmp/smoke.log | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - name: Assemble the port
         run: |
-          set -e
-          out=build/port
-          mkdir -p "$out/popbomb/data/gfx" "$out/popbomb/data/romfs/audio" \
-                   "$out/popbomb/libs.aarch64"
-          cp ports/r36s/PopBomb.sh "$out/"
-          cp ports/r36s/popbomb/port.json ports/r36s/popbomb/README.md \
-             ports/r36s/popbomb/gameinfo.xml ports/r36s/popbomb/screenshot.png \
-             ports/r36s/popbomb/popbomb.gptk "$out/popbomb/"
-          install -m 755 ports/sdl/popbomb-sdl "$out/popbomb/popbomb-sdl.aarch64"
-          cp -L /usr/local/lib/libSDL2-2.0.so.0 "$out/popbomb/libs.aarch64/"
-          cp ports/3ds/gfx/*.png ports/3ds/gfx/*.t3s "$out/popbomb/data/gfx/"
-          cp ports/3ds/romfs/audio/*.wav "$out/popbomb/data/romfs/audio/"
-          ldd "$out/popbomb/popbomb-sdl.aarch64"
-          (cd "$out" && zip -qr ../popbomb.zip .)
-          ls -lh build/popbomb.zip
+          set -o pipefail
+          if ! (
+            set -eux
+            out=build/port
+            mkdir -p "$out/popbomb/data/gfx" "$out/popbomb/data/romfs/audio" \
+                     "$out/popbomb/libs.aarch64"
+            cp ports/r36s/PopBomb.sh "$out/"
+            cp ports/r36s/popbomb/port.json ports/r36s/popbomb/README.md \
+               ports/r36s/popbomb/gameinfo.xml ports/r36s/popbomb/screenshot.png \
+               ports/r36s/popbomb/popbomb.gptk "$out/popbomb/"
+            install -m 755 ports/sdl/popbomb-sdl "$out/popbomb/popbomb-sdl.aarch64"
+            cp -L /usr/local/lib/libSDL2-2.0.so.0 "$out/popbomb/libs.aarch64/"
+            cp ports/3ds/gfx/*.png ports/3ds/gfx/*.t3s "$out/popbomb/data/gfx/"
+            cp ports/3ds/romfs/audio/*.wav "$out/popbomb/data/romfs/audio/"
+            ldd "$out/popbomb/popbomb-sdl.aarch64"
+            (cd "$out" && zip -qr ../popbomb.zip .)
+            ls -lh build/popbomb.zip
+          ) 2>&1 | tee /tmp/assemble.log; then
+            tail -n 15 /tmp/assemble.log | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
