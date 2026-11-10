@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<gameList>
+  <game>
+    <path>./PopBomb.sh</path>
+    <name>PopBomb Arena</name>
+    <desc>Q 版泡泡堂掌机版</desc>
+    <image>./popbomb/screenshot.png</image>
+  </game>
+</gameList>

@@ -1,0 +1,33 @@
+{
+  "version": 4,
+  "name": "popbomb.zip",
+  "items": [
+    "PopBomb.sh",
+    "popbomb"
+  ],
+  "items_opt": [],
+  "attr": {
+    "title": "PopBomb Arena",
+    "porter": [
+      "wubin1998"
+    ],
+    "desc": "Q 版泡泡堂掌机版：4 人乱斗、道具与炸弹。由 3DS 移植版复用同一套游戏逻辑与渲染代码。",
+    "desc_md": null,
+    "inst": "解压到 /roms/ports/ 后从 Ports 菜单启动 PopBomb。",
+    "inst_md": null,
+    "genres": [
+      "action"
+    ],
+    "image": {},
+    "rtr": false,
+    "exp": false,
+    "runtime": null,
+    "store": {},
+    "availability": "free",
+    "reqs": [],
+    "arch": [
+      "aarch64"
+    ],
+    "min_glibc": "2.31"
+  }
+}
