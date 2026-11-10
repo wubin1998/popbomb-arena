@@ -57,55 +57,18 @@ jobs:
             exit 1
           fi
 
+      # Both SDL2 and the game install/consume a prefix inside the checkout:
+      # a container job's steps do not share /tmp or /usr/local.
       - name: Build SDL2
-        working-directory: /tmp
         run: |
-          set -o pipefail
-          if ! (
-            set -eux
-            curl -fsSL --retry 4 --retry-delay 3 --retry-all-errors \
-              "https://www.libsdl.org/release/SDL2-${SDL_VERSION}.tar.gz" -o sdl2.tar.gz
-            tar xzf sdl2.tar.gz
-            # KMSDRM + GLES only: the handheld has no X11 or Wayland compositor.
-            # Install under the workspace: the checkout directory is the only
-            # place that survives between steps of a container job.
-            cmake -S "SDL2-${SDL_VERSION}" -B sdl2-build \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/_deps/sdlroot" \
-              -DCMAKE_INSTALL_LIBDIR=lib \
-              -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF \
-              -DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_KMSDRM=ON \
-              -DSDL_OPENGL=OFF -DSDL_OPENGLES=ON \
-              -DSDL_ALSA=ON -DSDL_PULSEAUDIO=OFF -DSDL_PIPEWIRE=OFF \
-              -DSDL_JACK=OFF -DSDL_SNDIO=OFF \
-              -DSDL_DBUS=OFF -DSDL_IBUS=OFF \
-              -DSDL_LIBUDEV=ON -DSDL_HIDAPI=ON
-            cmake --build sdl2-build -j"$(nproc)"
-            cmake --install sdl2-build
-            sdl_root="$GITHUB_WORKSPACE/_deps/sdlroot"
-            ls -l "$sdl_root/include/SDL2/SDL.h"
-            "$sdl_root/bin/sdl2-config" --cflags
-            "$sdl_root/bin/sdl2-config" --version
-          ) 2>&1 | tee /tmp/sdl2.log; then
-            tail -n 15 /tmp/sdl2.log | sed 's/^/::error::/'
-            exit 1
-          fi
+          bash ports/r36s/ci/with_log.sh sdl2 ports/r36s/ci/build_sdl2.sh \
+            "$GITHUB_WORKSPACE/_deps/sdlroot" "$SDL_VERSION" \
+            "$GITHUB_WORKSPACE/_deps/sdl2"
 
       - name: Build the game
         run: |
-          set -o pipefail
-          sdl_root="$GITHUB_WORKSPACE/_deps/sdlroot"
-          if ! (
-            set -eux
-            ls -l "$sdl_root/include/SDL2/SDL.h"
-            make -C ports/sdl -j"$(nproc)" \
-              SDL_CFLAGS="-I$sdl_root/include/SDL2 -D_THREAD_SAFE" \
-              SDL_LIBS="-L$sdl_root/lib -lSDL2"
-          ) 2>&1 | tee /tmp/game.log; then
-            head -n 25 /tmp/game.log | sed 's/^/::error::/'
-            tail -n 15 /tmp/game.log | sed 's/^/::error::/'
-            exit 1
-          fi
+          bash ports/r36s/ci/with_log.sh game ports/r36s/ci/build_game.sh \
+            "$GITHUB_WORKSPACE/_deps/sdlroot"
 
       # CI logs need auth; this artifact is readable without it when a step fails.
       - name: Collect diagnostics
@@ -132,41 +95,13 @@ jobs:
 
       - name: Smoke test (headless)
         run: |
-          set -o pipefail
-          if ! (
-            set -eux
-            LD_LIBRARY_PATH="$GITHUB_WORKSPACE/_deps/sdlroot/lib" \
-            POPBOMB_SELFTEST=300 POPBOMB_NOAUDIO=1 SDL_VIDEODRIVER=dummy \
-              POPBOMB_DATA="$PWD/ports/3ds" ./ports/sdl/popbomb-sdl
-            file ports/sdl/popbomb-sdl
-          ) 2>&1 | tee /tmp/smoke.log; then
-            tail -n 15 /tmp/smoke.log | sed 's/^/::error::/'
-            exit 1
-          fi
+          bash ports/r36s/ci/with_log.sh smoke ports/r36s/ci/smoke_test.sh \
+            "$GITHUB_WORKSPACE/_deps/sdlroot"
 
       - name: Assemble the port
         run: |
-          set -o pipefail
-          if ! (
-            set -eux
-            out=build/port
-            mkdir -p "$out/popbomb/data/gfx" "$out/popbomb/data/romfs/audio" \
-                     "$out/popbomb/libs.aarch64"
-            cp ports/r36s/PopBomb.sh "$out/"
-            cp ports/r36s/popbomb/port.json ports/r36s/popbomb/README.md \
-               ports/r36s/popbomb/gameinfo.xml ports/r36s/popbomb/screenshot.png \
-               ports/r36s/popbomb/popbomb.gptk "$out/popbomb/"
-            install -m 755 ports/sdl/popbomb-sdl "$out/popbomb/popbomb-sdl.aarch64"
-            cp -L "$GITHUB_WORKSPACE/_deps/sdlroot/lib/libSDL2-2.0.so.0" "$out/popbomb/libs.aarch64/"
-            cp ports/3ds/gfx/*.png ports/3ds/gfx/*.t3s "$out/popbomb/data/gfx/"
-            cp ports/3ds/romfs/audio/*.wav "$out/popbomb/data/romfs/audio/"
-            ldd "$out/popbomb/popbomb-sdl.aarch64"
-            (cd "$out" && zip -qr ../popbomb.zip .)
-            ls -lh build/popbomb.zip
-          ) 2>&1 | tee /tmp/assemble.log; then
-            tail -n 15 /tmp/assemble.log | sed 's/^/::error::/'
-            exit 1
-          fi
+          bash ports/r36s/ci/with_log.sh assemble ports/r36s/ci/assemble_port.sh \
+            "$GITHUB_WORKSPACE/_deps/sdlroot"
 
       - uses: actions/upload-artifact@v4
         with:

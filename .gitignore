@@ -12,6 +12,10 @@ node_modules/
 *.tmp
 *.bak
 
+# R36S 构建产物
+build/
+_deps/
+
 # 3DS 构建产物
 ports/3ds/build/
 ports/3ds/romfs/gfx/
