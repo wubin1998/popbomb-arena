@@ -34,6 +34,9 @@ jobs:
     # Native aarch64 runner, so SDL2 and the game build without a cross sysroot.
     runs-on: ubuntu-24.04-arm
     container: ubuntu:20.04
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v4
